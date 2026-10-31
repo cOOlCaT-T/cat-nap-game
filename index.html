@@ -55,12 +55,12 @@
   </div>
 </div>
 
-<!-- Подключаем Three.js и наши скрипты по очереди -->
-<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
-<script src="js/engine.js"></script>
-<script src="js/player.js"></script>
-<script src="js/levels/level1_bank.js"></script>
-<script src="js/levels/level2_street.js"></script>
-<script src="js/levels/level3_forest.js"></script>
+<!-- Подключаем Three.js и наши скрипты. defer гарантирует порядок загрузки -->
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js" defer></script>
+<script src="js/engine.js" defer></script>
+<script src="js/player.js" defer></script>
+<script src="js/levels/level1_bank.js" defer></script>
+<script src="js/levels/level2_street.js" defer></script>
+<script src="js/levels/level3_forest.js" defer></script>
 </body>
 </html>
