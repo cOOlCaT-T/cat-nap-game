@@ -1,248 +1,291 @@
-// js/player.js — игрок от первого лица + интерактивные объекты
-import { Game, THREE, showHint, showDialog } from './engine.js';
+// js/engine.js — движок (без модулей)
+window.Game = {
+  renderer: null,
+  scene: null,
+  camera: null,
+  clock: null,
+  running: false,
+  paused: false,
+  isMobile: /Android|iPhone|iPad|iPod/i.test(navigator.userAgent),
+  settings: { quality: 'medium', shadows: true, resolution: 75, volume: 70 },
+  input: { forward: 0, right: 0, action: false },
+  player: null,
+  currentLevel: null,
+  levels: {},
+  THREE: null
+};
 
-// ==================== ИГРОК ====================
-export function createPlayer(scene, camera, opts = {}) {
-  const p = {
-    camera,
-    position: new THREE.Vector3(opts.x ?? 0, opts.y ?? 1.7, opts.z ?? 0),
-    yaw: opts.yaw ?? 0,
-    pitch: 0,
-    speed: opts.speed ?? 3.2,
-    sprint: false,
-    height: 1.7,
-    gravity: -18,
-    velocityY: 0,
-    grounded: true,
-    radius: 0.35,
-    colliders: [],        // массив THREE.Box3 для коллизий
-    interactables: [],    // интерактивные объекты
-    nearest: null,
-    onAction: null,
-    enabled: true,
-  };
+// Инициализация Three.js (берем из глобальной переменной THREE, загруженной в HTML)
+window.Game.THREE = window.THREE;
 
-  camera.position.copy(p.position);
-
-  // -------- обзор (мышь + тач) --------
-  setupLook(p);
-
-  // -------- метод обновления --------
-  p.update = (dt) => {
-    if (!p.enabled) return;
-
-    // движение
-    const fwd = Game.input.forward;
-    const right = Game.input.right;
-    if (fwd || right) {
-      const sin = Math.sin(p.yaw), cos = Math.cos(p.yaw);
-      // направление вперёд по yaw
-      let dx = (-sin * fwd) + (cos * right);
-      let dz = (-cos * fwd) + (-sin * right);
-      const len = Math.hypot(dx, dz);
-      if (len > 0) { dx /= len; dz /= len; }
-      const sp = p.speed * (p.sprint ? 1.7 : 1);
-      const nx = p.position.x + dx * sp * dt;
-      const nz = p.position.z + dz * sp * dt;
-      if (!collide(p, nx, p.position.z)) p.position.x = nx;
-      if (!collide(p, p.position.x, nz)) p.position.z = nz;
-    }
-
-    // гравитация
-    p.velocityY += p.gravity * dt;
-    p.position.y += p.velocityY * dt;
-    if (p.position.y < p.height) { p.position.y = p.height; p.velocityY = 0; p.grounded = true; }
-
-    // камера
-    p.camera.position.copy(p.position);
-    p.camera.rotation.set(p.pitch, p.yaw, 0, 'YXZ');
-
-    // поиск ближайшего интерактивного объекта
-    updateNearest(p);
-
-    // действие
-    if (Game.input.action) {
-      Game.input.action = false; // одноразово
-      if (p.nearest) {
-        const obj = p.nearest;
-        if (obj.userData.onInteract) obj.userData.onInteract(p);
-      }
-    }
-  };
-
-  // -------- регистрация интерактивного объекта --------
-  p.addInteractable = (mesh, label, onInteract) => {
-    mesh.userData.interact = true;
-    mesh.userData.label = label;
-    mesh.userData.onInteract = onInteract;
-    p.interactables.push(mesh);
-    // маркер "!" над объектом
-    const marker = makeMarker();
-    marker.position.copy(mesh.position).add(new THREE.Vector3(0, 1.2, 0));
-    mesh.add(marker);
-    mesh.userData.marker = marker;
-    return mesh;
-  };
-
-  // -------- коллайдеры --------
-  p.addCollider = (box3) => p.colliders.push(box3);
-
-  p.teleport = (x, y, z, yaw) => {
-    p.position.set(x, y ?? p.height, z ?? 0);
-    if (yaw !== undefined) p.yaw = yaw;
-    p.velocityY = 0;
-  };
-
-  Game.player = p;
-  return p;
-}
-
-// ==================== ОБЗОР ====================
-function setupLook(p) {
-  // мышь (pointer lock по клику)
-  const canvas = Game.renderer.domElement;
-  canvas.addEventListener('click', () => {
-    if (!Game.isMobile && !document.pointerLockElement) canvas.requestPointerLock?.();
+Game.createRenderer = function() {
+  const canvas = document.getElementById('scene');
+  const renderer = new Game.THREE.WebGLRenderer({
+    canvas: canvas,
+    antialias: Game.settings.quality !== 'low',
+    powerPreference: 'high-performance',
   });
-  document.addEventListener('pointerlockchange', () => {
-    p.lockActive = !!document.pointerLockElement;
+  Game.applyQuality(renderer);
+  Game.renderer = renderer;
+};
+
+Game.applyQuality = function(renderer) {
+  const q = Game.settings.quality;
+  const dpr = Math.min(window.devicePixelRatio || 1, q === 'low' ? 1 : q === 'medium' ? 1.5 : 2);
+  renderer.setPixelRatio(dpr * (Game.settings.resolution / 100));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.shadowMap.enabled = Game.settings.shadows && q !== 'low';
+  renderer.shadowMap.type = Game.THREE.PCFSoftShadowMap;
+  renderer.toneMapping = Game.THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = q === 'low' ? 0.9 : 1.0;
+};
+
+Game.createScene = function() {
+  const scene = new Game.THREE.Scene();
+  scene.background = new Game.THREE.Color(0x05050a);
+  scene.fog = new Game.THREE.Fog(0x05050a, 20, 80);
+  Game.scene = scene;
+
+  const camera = new Game.THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 200);
+  camera.position.set(0, 1.7, 5);
+  Game.camera = camera;
+};
+
+Game.addLights = function(scene, opts = {}) {
+  const amb = new Game.THREE.AmbientLight(0x404060, opts.ambient ?? 0.6);
+  scene.add(amb);
+  const hemi = new Game.THREE.HemisphereLight(0x8899ff, 0x221100, opts.hemi ?? 0.4);
+  scene.add(hemi);
+  const dir = new Game.THREE.DirectionalLight(0xffeedd, opts.dir ?? 0.8);
+  dir.position.set(5, 12, 6);
+  if (Game.settings.shadows) {
+    dir.castShadow = true;
+    dir.shadow.mapSize.set(1024, 1024);
+    dir.shadow.camera.near = 1;
+    dir.shadow.camera.far = 50;
+    dir.shadow.camera.left = -20;
+    dir.shadow.camera.right = 20;
+    dir.shadow.camera.top = 20;
+    dir.shadow.camera.bottom = -20;
+  }
+  scene.add(dir);
+  return { amb, hemi, dir };
+};
+
+Game.registerLevel = function(name, levelObj) {
+  Game.levels[name] = levelObj;
+};
+
+Game.loadLevel = function(name) {
+  if (Game.currentLevel && Game.currentLevel.dispose) {
+    try { Game.currentLevel.dispose(); } catch (e) { console.warn(e); }
+  }
+  Game.scene.clear();
+  Game.scene.background = new Game.THREE.Color(0x05050a);
+  Game.scene.fog = new Game.THREE.Fog(0x05050a, 20, 80);
+  Game.addLights(Game.scene, { ambient: 0.5, hemi: 0.35, dir: 0.7 });
+  
+  Game.input.forward = Game.input.right = 0;
+
+  const level = Game.levels[name];
+  if (!level) { console.error('Уровень не найден:', name); return; }
+
+  Game.showLevelLoad(true);
+  level.init(Game.scene, Game.camera, function(p) {
+    Game.setLevelProgress(p * 100);
   });
-  document.addEventListener('mousemove', (e) => {
-    if (!p.lockActive || Game.isMobile) return;
-    p.yaw -= e.movementX * 0.0025;
-    p.pitch -= e.movementY * 0.0025;
-    clampPitch(p);
+  Game.setLevelProgress(100);
+  
+  setTimeout(function() {
+    Game.showLevelLoad(false);
+    Game.currentLevel = level;
+  }, 300);
+};
+
+Game.showLevelLoad = function(show) {
+  const el = document.getElementById('levelLoad');
+  if (!el) return;
+  if (show) el.classList.remove('hidden'); else el.classList.add('hidden');
+  if (show) Game.setLevelProgress(0);
+};
+
+Game.setLevelProgress = function(p) {
+  const fill = document.getElementById('levelBarFill');
+  const txt = document.getElementById('levelLoadText');
+  if (fill) fill.style.width = p + '%';
+  if (txt) txt.textContent = 'Загрузка локации... ' + Math.round(p) + '%';
+};
+
+Game.loop = function() {
+  if (!Game.running) return;
+  requestAnimationFrame(Game.loop);
+  const dt = Math.min(Game.clock.getDelta(), 0.1);
+
+  if (!Game.paused && Game.currentLevel && Game.currentLevel.update) {
+    Game.currentLevel.update(dt, Game);
+  }
+  if (!Game.paused && Game.player && Game.player.update) {
+    Game.player.update(dt, Game);
+  }
+
+  if (Game.renderer && Game.scene && Game.camera) {
+    Game.renderer.render(Game.scene, Game.camera);
+  }
+};
+
+Game.setupKeyboard = function() {
+  const map = { KeyW: 'forward+', KeyS: 'forward-', KeyA: 'right-', KeyD: 'right+',
+                ArrowUp: 'forward+', ArrowDown: 'forward-', ArrowLeft: 'right-', ArrowRight: 'right+' };
+  window.addEventListener('keydown', function(e) {
+    if (map[e.code]) { e.preventDefault(); Game.applyMove(map[e.code], true); }
+    if (e.code === 'KeyE' || e.code === 'Space') { Game.input.action = true; }
+    if (e.code === 'Escape') Game.togglePause();
+  });
+  window.addEventListener('keyup', function(e) {
+    if (map[e.code]) Game.applyMove(map[e.code], false);
+    if (e.code === 'KeyE' || e.code === 'Space') Game.input.action = false;
+  });
+};
+
+Game.applyMove = function(dir, on) {
+  const val = on ? 1 : 0;
+  if (dir === 'forward+') Game.input.forward = val;
+  if (dir === 'forward-') Game.input.forward = val ? -1 : 0;
+  if (dir === 'right+') Game.input.right = val;
+  if (dir === 'right-') Game.input.right = val ? -1 : 0;
+};
+
+Game.setupMobileControls = function() {
+  if (!Game.isMobile) return;
+  const mob = document.getElementById('mobile');
+  if (mob) mob.classList.remove('hidden');
+
+  const zone = document.getElementById('joyZone');
+  const knob = document.getElementById('joyKnob');
+  if (!zone || !knob) return;
+  
+  let active = false, cx = 0, cy = 0;
+  const maxDist = 40;
+
+  zone.addEventListener('touchstart', function(e) {
+    const t = e.changedTouches[0];
+    const r = zone.getBoundingClientRect();
+    cx = r.left + r.width / 2; cy = r.top + r.height / 2;
+    active = true; moveKnob(t.clientX, t.clientY);
+    e.preventDefault();
+  }, { passive: false });
+
+  zone.addEventListener('touchmove', function(e) {
+    if (!active) return;
+    const t = e.changedTouches[0];
+    moveKnob(t.clientX, t.clientY);
+    e.preventDefault();
+  }, { passive: false });
+
+  zone.addEventListener('touchend', function() {
+    active = false;
+    knob.style.transform = 'translate(0,0)';
+    Game.input.forward = 0; Game.input.right = 0;
   });
 
-  // тач: свайп правой частью экрана
-  if (Game.isMobile) {
-    let touching = false, lastX = 0, lastY = 0;
-    canvas.addEventListener('touchstart', (e) => {
-      const t = e.changedTouches[0];
-      if (t.clientX > window.innerWidth * 0.4) { touching = true; lastX = t.clientX; lastY = t.clientY; }
-    }, { passive: true });
-    canvas.addEventListener('touchmove', (e) => {
-      if (!touching) return;
-      const t = e.changedTouches[0];
-      p.yaw -= (t.clientX - lastX) * 0.006;
-      p.pitch -= (t.clientY - lastY) * 0.006;
-      lastX = t.clientX; lastY = t.clientY;
-      clampPitch(p);
-    }, { passive: true });
-    canvas.addEventListener('touchend', () => { touching = false; });
+  function moveKnob(px, py) {
+    let dx = px - cx, dy = py - cy;
+    const len = Math.hypot(dx, dy);
+    if (len > maxDist) { dx = dx / len * maxDist; dy = dy / len * maxDist; }
+    knob.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+    Game.input.right = dx / maxDist;
+    Game.input.forward = -dy / maxDist;
   }
-}
 
-function clampPitch(p) {
-  const lim = Math.PI / 2 - 0.05;
-  if (p.pitch > lim) p.pitch = lim;
-  if (p.pitch < -lim) p.pitch = -lim;
-}
-
-// ==================== КОЛЛИЗИИ ====================
-function collide(p, x, z) {
-  const h = 0.5;
-  const min = new THREE.Vector3(x - p.radius, p.position.y - p.height + 0.1, z - p.radius);
-  const max = new THREE.Vector3(x + p.radius, p.position.y + 0.1, z + p.radius);
-  const testBox = new THREE.Box3(min, max);
-  for (const c of p.colliders) {
-    if (testBox.intersectsBox(c)) return true;
+  const btnA = document.getElementById('btnAction');
+  if (btnA) {
+    btnA.addEventListener('touchstart', function(e) { Game.input.action = true; e.preventDefault(); }, { passive: false });
+    btnA.addEventListener('touchend', function() { Game.input.action = false; });
   }
-  return false;
-}
 
-// ==================== ПОИСК БЛИЖАЙШЕГО ====================
-function updateNearest(p) {
-  let best = null, bestDist = 2.4; // радиус взаимодействия
-  const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(p.camera.quaternion);
-  for (const obj of p.interactables) {
-    if (!obj.visible) continue;
-    const wp = new THREE.Vector3();
-    obj.getWorldPosition(wp);
-    const dist = wp.distanceTo(p.position);
-    if (dist < bestDist) {
-      // проверка, что объект примерно перед игроком
-      const toObj = wp.clone().sub(p.position).normalize();
-      const dot = toObj.dot(forward);
-      if (dot > 0.2 || dist < 1.2) { best = obj; bestDist = dist; }
-    }
-  }
-  if (best !== p.nearest) {
-    // убрать подсветку у старого
-    if (p.nearest && p.nearest.userData.marker) p.nearest.userData.marker.visible = true;
-    p.nearest = best;
-    if (best && best.userData.label) {
-      showHint(Game.isMobile ? 'Нажми «!»' : 'E — ' + best.userData.label);
-    } else {
-      showHint(null);
-    }
-  }
-}
+  const btnP = document.getElementById('btnPause');
+  if (btnP) btnP.addEventListener('click', Game.togglePause);
+};
 
-// ==================== МАРКЕР "!" ====================
-function makeMarker() {
-  const canvas = document.createElement('canvas');
-  canvas.width = canvas.height = 128;
-  const ctx = canvas.getContext('2d');
-  // фон-кружок
-  ctx.beginPath();
-  ctx.arc(64, 64, 56, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(220,40,40,0.9)';
-  ctx.fill();
-  ctx.lineWidth = 6;
-  ctx.strokeStyle = '#fff';
-  ctx.stroke();
-  // восклицательный знак
-  ctx.fillStyle = '#fff';
-  ctx.font = 'bold 92px Arial';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('!', 64, 68);
+Game.togglePause = function() {
+  if (!Game.running) return;
+  Game.paused = !Game.paused;
+  const p = document.getElementById('btnPause');
+  if (p) p.textContent = Game.paused ? '▶' : '❚❚';
+  Game.showHint(Game.paused ? 'Пауза' : null);
+};
 
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.needsUpdate = true;
-  const mat = new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true });
-  const sprite = new THREE.Sprite(mat);
-  sprite.scale.set(0.5, 0.5, 0.5);
-  sprite.renderOrder = 999;
-  return sprite;
-}
+Game.showHint = function(text) {
+  const el = document.getElementById('hint');
+  if (!el) return;
+  if (text) { el.textContent = text; el.classList.remove('hidden'); }
+  else el.classList.add('hidden');
+};
 
-// ==================== ПРОСТЫЕ КОЛЛАЙДЕРЫ ====================
-// Хелпер: добавить стену/коробку как коллайдер
-export function addBoxCollider(player, mesh) {
-  mesh.updateMatrixWorld(true);
-  const box = new THREE.Box3().setFromObject(mesh);
-  player.addCollider(box);
-  return box;
-}
+Game.showDialog = function(text, onNext) {
+  const box = document.getElementById('dialog');
+  const txt = document.getElementById('dialogText');
+  const nxt = document.getElementById('dialogNext');
+  if (!box || !txt || !nxt) return;
 
-// Хелпер: создать комнату (пол + 4 стены) и вернуть коллайдеры
-export function buildRoom(scene, w, d, h, matFloor, matWall) {
-  const group = new THREE.Group();
-  // пол
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(w, d), matFloor);
-  floor.rotation.x = -Math.PI / 2;
-  floor.receiveShadow = true;
-  group.add(floor);
-  // потолок
-  const ceil = new THREE.Mesh(new THREE.PlaneGeometry(w, d), matWall);
-  ceil.rotation.x = Math.PI / 2;
-  ceil.position.y = h;
-  group.add(ceil);
-  // стены
-  const makeWall = (x, z, rotY, len) => {
-    const wall = new THREE.Mesh(new THREE.PlaneGeometry(len, h), matWall);
-    wall.position.set(x, h / 2, z);
-    wall.rotation.y = rotY;
-    wall.receiveShadow = true;
-    group.add(wall);
-    return wall;
+  box.classList.remove('hidden');
+  txt.textContent = '';
+  let i = 0;
+  const timer = setInterval(function() {
+    txt.textContent += text[i++] || '';
+    if (i >= text.length) clearInterval(timer);
+  }, 22);
+  
+  const handler = function() {
+    nxt.removeEventListener('click', handler);
+    box.classList.add('hidden');
+    if (onNext) onNext();
   };
-  makeWall(0, -d / 2, 0, w);           // задняя
-  makeWall(0, d / 2, Math.PI, w);      // передняя
-  makeWall(-w / 2, 0, Math.PI / 2, d); // левая
-  makeWall(w / 2, 0, -Math.PI / 2, d); // правая
-  scene.add(group);
-  return group;
-}
+  nxt.addEventListener('click', handler);
+};
+
+Game.startGame = function(firstLevel) {
+  document.getElementById('menu').classList.add('hidden');
+  document.getElementById('game').classList.remove('hidden');
+
+  if (!Game.clock) Game.clock = new Game.THREE.Clock();
+  if (!Game.renderer) Game.createRenderer();
+  Game.createScene();
+  Game.setupKeyboard();
+  Game.setupMobileControls();
+  
+  window.removeEventListener('resize', Game.onResize);
+  window.addEventListener('resize', Game.onResize);
+
+  Game.running = true;
+  Game.paused = false;
+  Game.clock.start();
+  Game.loop();
+
+  Game.loadLevel(firstLevel || 'level1_bank');
+};
+
+Game.onResize = function() {
+  if (!Game.renderer || !Game.camera) return;
+  Game.camera.aspect = window.innerWidth / window.innerHeight;
+  Game.camera.updateProjectionMatrix();
+  Game.applyQuality(Game.renderer);
+};
+
+Game.applySettingsFromUI = function() {
+  Game.settings.quality = document.getElementById('setQuality').value;
+  Game.settings.shadows = document.getElementById('setShadows').checked;
+  Game.settings.resolution = +document.getElementById('setRes').value;
+  Game.settings.volume = +document.getElementById('setVol').value;
+  if (Game.renderer) Game.applyQuality(Game.renderer);
+};
+
+// Привязка кнопок меню (после загрузки страницы)
+window.addEventListener('DOMContentLoaded', function() {
+  const btnStart = document.getElementById('btnStart');
+  if (btnStart) {
+    btnStart.addEventListener('click', function() {
+      Game.startGame('level1_bank');
+    });
+  }
+});
