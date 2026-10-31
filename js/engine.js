@@ -15,7 +15,6 @@ window.Game = {
   THREE: null
 };
 
-// Инициализация Three.js (берем из глобальной переменной THREE, загруженной в HTML)
 window.Game.THREE = window.THREE;
 
 Game.createRenderer = function() {
@@ -282,6 +281,11 @@ Game.applySettingsFromUI = function() {
 
 // Привязка кнопок меню (после загрузки страницы)
 window.addEventListener('DOMContentLoaded', function() {
+  // 1. Прячем экран загрузки
+  const loader = document.getElementById('loader');
+  if (loader) loader.style.display = 'none';
+
+  // 2. Привязываем кнопку "Начать"
   const btnStart = document.getElementById('btnStart');
   if (btnStart) {
     btnStart.addEventListener('click', function() {
