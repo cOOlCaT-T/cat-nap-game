@@ -8,8 +8,6 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-<!-- ЭКРАН ЗАГРУЗКИ -->
 <div id="loader">
   <div class="loader-box">
     <div class="loader-title">КЭТ НАП</div>
@@ -18,8 +16,6 @@
     <div id="loadText">Загрузка...</div>
   </div>
 </div>
-
-<!-- ГЛАВНОЕ МЕНЮ -->
 <div id="menu" class="hidden">
   <div class="menu-title">КЭТ НАП</div>
   <div class="menu-sub">Poppy Playtime: Night Shift</div>
@@ -27,11 +23,8 @@
   <button class="btn" id="btnSettings">⚙ Настройки</button>
   <div class="menu-foot">v0.1 • мобильная версия</div>
 </div>
-
-<!-- НАСТРОЙКИ -->
 <div id="settings" class="hidden">
   <div class="settings-title">Настройки</div>
-
   <label class="row">Качество графики
     <select id="setQuality">
       <option value="low">Низкое (телефон)</option>
@@ -39,50 +32,35 @@
       <option value="high">Высокое</option>
     </select>
   </label>
-
-  <label class="row">Тени
-    <input type="checkbox" id="setShadows" checked>
-  </label>
-
-  <label class="row">Разрешение рендера
-    <input type="range" id="setRes" min="50" max="100" value="75">
-  </label>
-
-  <label class="row">Громкость
-    <input type="range" id="setVol" min="0" max="100" value="70">
-  </label>
-
+  <label class="row">Тени <input type="checkbox" id="setShadows" checked></label>
+  <label class="row">Разрешение <input type="range" id="setRes" min="50" max="100" value="75"></label>
+  <label class="row">Громкость <input type="range" id="setVol" min="0" max="100" value="70"></label>
   <button class="btn" id="btnBack">← Назад</button>
 </div>
-
-<!-- ИГРОВОЙ КОНТЕЙНЕР -->
 <div id="game" class="hidden">
   <canvas id="scene"></canvas>
-
-  <!-- Подсказка взаимодействия -->
   <div id="hint" class="hidden">Нажми E / кнопку</div>
-
-  <!-- Мобильные контролы -->
   <div id="mobile" class="hidden">
     <div id="joyZone"><div id="joyKnob"></div></div>
     <div id="btnAction">!</div>
     <div id="btnPause">❚❚</div>
   </div>
-
-  <!-- Диалог / катсцена -->
   <div id="dialog" class="hidden">
     <div id="dialogText"></div>
     <div id="dialogNext">▶</div>
   </div>
-
-  <!-- Экран загрузки локации -->
   <div id="levelLoad" class="hidden">
     <div class="bar"><div id="levelBarFill"></div></div>
     <div id="levelLoadText">Загрузка локации...</div>
   </div>
 </div>
 
-<!-- ТОЧКА ВХОДА ДВИЖКА -->
-<script type="module" src="js/engine.js"></script>
+<!-- Подключаем Three.js и наши скрипты по очереди -->
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/player.js"></script>
+<script src="js/levels/level1_bank.js"></script>
+<script src="js/levels/level2_street.js"></script>
+<script src="js/levels/level3_forest.js"></script>
 </body>
 </html>
