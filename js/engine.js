@@ -1,67 +1,62 @@
-// js/engine.js — движок игры "Кэт Нап"
-import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
-
-// ==================== ГЛОБАЛЬНОЕ СОСТОЯНИЕ ====================
-export const Game = {
+// js/engine.js — движок (без модулей)
+window.Game = {
   renderer: null,
   scene: null,
   camera: null,
-  clock: new THREE.Clock(),
+  clock: null,
   running: false,
   paused: false,
   isMobile: /Android|iPhone|iPad|iPod/i.test(navigator.userAgent),
   settings: { quality: 'medium', shadows: true, resolution: 75, volume: 70 },
-  input: { forward: 0, right: 0, action: false, look: { x: 0, y: 0 } },
+  input: { forward: 0, right: 0, action: false },
   player: null,
   currentLevel: null,
-  levels: {},          // реестр уровней { name: {init, update, dispose} }
-  listeners: [],
+  levels: {},
+  THREE: null
 };
 
-// ==================== РЕНДЕРЕР ====================
-function createRenderer() {
+// Инициализация Three.js (берем из глобальной переменной THREE, загруженной в HTML)
+window.Game.THREE = window.THREE;
+
+Game.createRenderer = function() {
   const canvas = document.getElementById('scene');
-  const renderer = new THREE.WebGLRenderer({
-    canvas,
+  const renderer = new Game.THREE.WebGLRenderer({
+    canvas: canvas,
     antialias: Game.settings.quality !== 'low',
     powerPreference: 'high-performance',
   });
-  applyQuality(renderer);
+  Game.applyQuality(renderer);
   Game.renderer = renderer;
-}
+};
 
-function applyQuality(renderer) {
+Game.applyQuality = function(renderer) {
   const q = Game.settings.quality;
   const dpr = Math.min(window.devicePixelRatio || 1, q === 'low' ? 1 : q === 'medium' ? 1.5 : 2);
   renderer.setPixelRatio(dpr * (Game.settings.resolution / 100));
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.shadowMap.enabled = Game.settings.shadows && q !== 'low';
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.shadowMap.type = Game.THREE.PCFSoftShadowMap;
+  renderer.toneMapping = Game.THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = q === 'low' ? 0.9 : 1.0;
-}
+};
 
-// ==================== СЦЕНА / КАМЕРА ====================
-function createScene() {
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x05050a);
-  scene.fog = new THREE.Fog(0x05050a, 20, 80);
+Game.createScene = function() {
+  const scene = new Game.THREE.Scene();
+  scene.background = new Game.THREE.Color(0x05050a);
+  scene.fog = new Game.THREE.Fog(0x05050a, 20, 80);
   Game.scene = scene;
 
-  const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 200);
+  const camera = new Game.THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 200);
   camera.position.set(0, 1.7, 5);
   Game.camera = camera;
-}
+};
 
-// ==================== БАЗОВЫЙ СВЕТ ====================
-export function addLights(scene, opts = {}) {
-  const amb = new THREE.AmbientLight(0x404060, opts.ambient ?? 0.6);
+Game.addLights = function(scene, opts = {}) {
+  const amb = new Game.THREE.AmbientLight(0x404060, opts.ambient ?? 0.6);
   scene.add(amb);
-
-  const hemi = new THREE.HemisphereLight(0x8899ff, 0x221100, opts.hemi ?? 0.4);
+  const hemi = new Game.THREE.HemisphereLight(0x8899ff, 0x221100, opts.hemi ?? 0.4);
   scene.add(hemi);
-
-  const dir = new THREE.DirectionalLight(0xffeedd, opts.dir ?? 0.8);
+  const dir = new Game.THREE.DirectionalLight(0xffeedd, opts.dir ?? 0.8);
   dir.position.set(5, 12, 6);
   if (Game.settings.shadows) {
     dir.castShadow = true;
@@ -75,107 +70,104 @@ export function addLights(scene, opts = {}) {
   }
   scene.add(dir);
   return { amb, hemi, dir };
-}
+};
 
-// ==================== МЕНЕДЖЕР УРОВНЕЙ ====================
-export function registerLevel(name, levelObj) {
+Game.registerLevel = function(name, levelObj) {
   Game.levels[name] = levelObj;
-}
+};
 
-export async function loadLevel(name, onProgress) {
-  // очистка предыдущего
+Game.loadLevel = function(name) {
   if (Game.currentLevel && Game.currentLevel.dispose) {
     try { Game.currentLevel.dispose(); } catch (e) { console.warn(e); }
   }
   Game.scene.clear();
-  createSceneBaseLight();
+  Game.scene.background = new Game.THREE.Color(0x05050a);
+  Game.scene.fog = new Game.THREE.Fog(0x05050a, 20, 80);
+  Game.addLights(Game.scene, { ambient: 0.5, hemi: 0.35, dir: 0.7 });
+  
   Game.input.forward = Game.input.right = 0;
 
   const level = Game.levels[name];
   if (!level) { console.error('Уровень не найден:', name); return; }
 
-  showLevelLoad(true);
-  if (onProgress) onProgress(0.2);
-  await level.init(Game.scene, Game.camera, (p) => {
-    if (onProgress) onProgress(p);
-    setLevelProgress(p * 100);
+  Game.showLevelLoad(true);
+  level.init(Game.scene, Game.camera, function(p) {
+    Game.setLevelProgress(p * 100);
   });
-  if (onProgress) onProgress(1);
-  setLevelProgress(100);
-  await new Promise(r => setTimeout(r, 300));
-  showLevelLoad(false);
+  Game.setLevelProgress(100);
+  
+  setTimeout(function() {
+    Game.showLevelLoad(false);
+    Game.currentLevel = level;
+  }, 300);
+};
 
-  Game.currentLevel = level;
-  Game.currentLevelName = name;
-}
-
-function createSceneBaseLight() {
-  addLights(Game.scene, { ambient: 0.5, hemi: 0.35, dir: 0.7 });
-}
-
-function showLevelLoad(show) {
+Game.showLevelLoad = function(show) {
   const el = document.getElementById('levelLoad');
   if (!el) return;
-  el.classList.toggle('hidden', !show);
-  if (show) setLevelProgress(0);
-}
-function setLevelProgress(p) {
+  if (show) el.classList.remove('hidden'); else el.classList.add('hidden');
+  if (show) Game.setLevelProgress(0);
+};
+
+Game.setLevelProgress = function(p) {
   const fill = document.getElementById('levelBarFill');
   const txt = document.getElementById('levelLoadText');
   if (fill) fill.style.width = p + '%';
   if (txt) txt.textContent = 'Загрузка локации... ' + Math.round(p) + '%';
-}
+};
 
-// ==================== ИГРОВОЙ ЦИКЛ ====================
-function loop() {
+Game.loop = function() {
   if (!Game.running) return;
-  requestAnimationFrame(loop);
+  requestAnimationFrame(Game.loop);
   const dt = Math.min(Game.clock.getDelta(), 0.1);
 
   if (!Game.paused && Game.currentLevel && Game.currentLevel.update) {
     Game.currentLevel.update(dt, Game);
   }
-  // обновление игрока (если уровень его использует)
   if (!Game.paused && Game.player && Game.player.update) {
     Game.player.update(dt, Game);
   }
 
-  Game.renderer.render(Game.scene, Game.camera);
-}
+  if (Game.renderer && Game.scene && Game.camera) {
+    Game.renderer.render(Game.scene, Game.camera);
+  }
+};
 
-// ==================== ВВОД: КЛАВИАТУРА ====================
-function setupKeyboard() {
+Game.setupKeyboard = function() {
   const map = { KeyW: 'forward+', KeyS: 'forward-', KeyA: 'right-', KeyD: 'right+',
                 ArrowUp: 'forward+', ArrowDown: 'forward-', ArrowLeft: 'right-', ArrowRight: 'right+' };
-  window.addEventListener('keydown', (e) => {
-    if (map[e.code]) { e.preventDefault(); applyMove(map[e.code], true); }
+  window.addEventListener('keydown', function(e) {
+    if (map[e.code]) { e.preventDefault(); Game.applyMove(map[e.code], true); }
     if (e.code === 'KeyE' || e.code === 'Space') { Game.input.action = true; }
-    if (e.code === 'Escape') togglePause();
+    if (e.code === 'Escape') Game.togglePause();
   });
-  window.addEventListener('keyup', (e) => {
-    if (map[e.code]) applyMove(map[e.code], false);
+  window.addEventListener('keyup', function(e) {
+    if (map[e.code]) Game.applyMove(map[e.code], false);
     if (e.code === 'KeyE' || e.code === 'Space') Game.input.action = false;
   });
-}
-function applyMove(dir, on) {
+};
+
+Game.applyMove = function(dir, on) {
   const val = on ? 1 : 0;
   if (dir === 'forward+') Game.input.forward = val;
   if (dir === 'forward-') Game.input.forward = val ? -1 : 0;
   if (dir === 'right+') Game.input.right = val;
   if (dir === 'right-') Game.input.right = val ? -1 : 0;
-}
+};
 
-// ==================== ВВОД: МОБИЛЬНЫЙ ДЖОЙСТИК ====================
-function setupMobileControls() {
+Game.setupMobileControls = function() {
   if (!Game.isMobile) return;
-  document.getElementById('mobile').classList.remove('hidden');
+  const mob = document.getElementById('mobile');
+  if (mob) mob.classList.remove('hidden');
 
   const zone = document.getElementById('joyZone');
   const knob = document.getElementById('joyKnob');
+  if (!zone || !knob) return;
+  
   let active = false, cx = 0, cy = 0;
   const maxDist = 40;
 
-  zone.addEventListener('touchstart', (e) => {
+  zone.addEventListener('touchstart', function(e) {
     const t = e.changedTouches[0];
     const r = zone.getBoundingClientRect();
     cx = r.left + r.width / 2; cy = r.top + r.height / 2;
@@ -183,14 +175,14 @@ function setupMobileControls() {
     e.preventDefault();
   }, { passive: false });
 
-  zone.addEventListener('touchmove', (e) => {
+  zone.addEventListener('touchmove', function(e) {
     if (!active) return;
     const t = e.changedTouches[0];
     moveKnob(t.clientX, t.clientY);
     e.preventDefault();
   }, { passive: false });
 
-  zone.addEventListener('touchend', () => {
+  zone.addEventListener('touchend', function() {
     active = false;
     knob.style.transform = 'translate(0,0)';
     Game.input.forward = 0; Game.input.right = 0;
@@ -200,99 +192,100 @@ function setupMobileControls() {
     let dx = px - cx, dy = py - cy;
     const len = Math.hypot(dx, dy);
     if (len > maxDist) { dx = dx / len * maxDist; dy = dy / len * maxDist; }
-    knob.style.transform = `translate(${dx}px,${dy}px)`;
+    knob.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
     Game.input.right = dx / maxDist;
     Game.input.forward = -dy / maxDist;
   }
 
-  // кнопка действия
   const btnA = document.getElementById('btnAction');
-  btnA.addEventListener('touchstart', (e) => { Game.input.action = true; e.preventDefault(); }, { passive: false });
-  btnA.addEventListener('touchend', () => { Game.input.action = false; });
+  if (btnA) {
+    btnA.addEventListener('touchstart', function(e) { Game.input.action = true; e.preventDefault(); }, { passive: false });
+    btnA.addEventListener('touchend', function() { Game.input.action = false; });
+  }
 
-  // пауза
-  document.getElementById('btnPause').addEventListener('click', togglePause);
-}
+  const btnP = document.getElementById('btnPause');
+  if (btnP) btnP.addEventListener('click', Game.togglePause);
+};
 
-// ==================== ПАУЗА ====================
-export function togglePause() {
+Game.togglePause = function() {
   if (!Game.running) return;
   Game.paused = !Game.paused;
   const p = document.getElementById('btnPause');
   if (p) p.textContent = Game.paused ? '▶' : '❚❚';
-  document.getElementById('hint').classList.toggle('hidden', Game.paused);
-}
+  Game.showHint(Game.paused ? 'Пауза' : null);
+};
 
-// ==================== UI-ХЕЛПЕРЫ ====================
-export function showHint(text) {
+Game.showHint = function(text) {
   const el = document.getElementById('hint');
   if (!el) return;
   if (text) { el.textContent = text; el.classList.remove('hidden'); }
   else el.classList.add('hidden');
-}
+};
 
-export function showDialog(text, onNext) {
+Game.showDialog = function(text, onNext) {
   const box = document.getElementById('dialog');
   const txt = document.getElementById('dialogText');
   const nxt = document.getElementById('dialogNext');
+  if (!box || !txt || !nxt) return;
+
   box.classList.remove('hidden');
   txt.textContent = '';
   let i = 0;
-  const timer = setInterval(() => {
+  const timer = setInterval(function() {
     txt.textContent += text[i++] || '';
     if (i >= text.length) clearInterval(timer);
   }, 22);
-  const handler = () => {
+  
+  const handler = function() {
     nxt.removeEventListener('click', handler);
     box.classList.add('hidden');
     if (onNext) onNext();
   };
   nxt.addEventListener('click', handler);
-}
+};
 
-// ==================== СТАРТ ====================
-export function startGame(firstLevel = 'level1_bank') {
+Game.startGame = function(firstLevel) {
   document.getElementById('menu').classList.add('hidden');
   document.getElementById('game').classList.remove('hidden');
 
-  if (!Game.renderer) createRenderer();
-  createScene();
-  Game.scene.clear();
-  createSceneBaseLight();
-  setupKeyboard();
-  setupMobileControls();
-  window.addEventListener('resize', onResize);
+  if (!Game.clock) Game.clock = new Game.THREE.Clock();
+  if (!Game.renderer) Game.createRenderer();
+  Game.createScene();
+  Game.setupKeyboard();
+  Game.setupMobileControls();
+  
+  window.removeEventListener('resize', Game.onResize);
+  window.addEventListener('resize', Game.onResize);
 
   Game.running = true;
   Game.paused = false;
   Game.clock.start();
-  loop();
+  Game.loop();
 
-  // загрузка первой главы
-  import('./levels/level1_bank.js').then((m) => {
-    registerLevel('level1_bank', m.default);
-    loadLevel(firstLevel);
-  }).catch(err => {
-    console.error('Не удалось загрузить главу:', err);
-    showDialog('Ошибка загрузки уровня. Проверь консоль.');
-  });
-}
+  Game.loadLevel(firstLevel || 'level1_bank');
+};
 
-function onResize() {
-  if (!Game.renderer) return;
+Game.onResize = function() {
+  if (!Game.renderer || !Game.camera) return;
   Game.camera.aspect = window.innerWidth / window.innerHeight;
   Game.camera.updateProjectionMatrix();
-  applyQuality(Game.renderer);
-}
+  Game.applyQuality(Game.renderer);
+};
 
-// ==================== НАСТРОЙКИ ИЗ UI ====================
-export function applySettingsFromUI() {
+Game.applySettingsFromUI = function() {
   Game.settings.quality = document.getElementById('setQuality').value;
   Game.settings.shadows = document.getElementById('setShadows').checked;
   Game.settings.resolution = +document.getElementById('setRes').value;
   Game.settings.volume = +document.getElementById('setVol').value;
-  if (Game.renderer) applyQuality(Game.renderer);
-}
+  if (Game.renderer) Game.applyQuality(Game.renderer);
+};
 
-// Экспорт для уровней
-export { THREE };
+// Привязка кнопок меню (после загрузки страницы)
+window.addEventListener('DOMContentLoaded', function() {
+  const btnStart = document.getElementById('btnStart');
+  if (btnStart) {
+    btnStart.addEventListener('click', function() {
+      Game.startGame('level1_bank');
+    });
+  }
+});
