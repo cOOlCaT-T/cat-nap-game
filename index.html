@@ -16,38 +16,36 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000; font-fami
 .bar { width:100%; height:8px; background:#222; border-radius:6px; overflow:hidden; }
 .bar > div { height:100%; width:0%; background:linear-gradient(90deg,#e33,#f77); transition:width .3s; }
 #loadText { margin-top:10px; font-size:.8rem; color:#777; }
-  #menu-canvas { position:absolute; inset:0; width:100%; height:100%; z-index:0; }
-#menu > *:not(#menu-canvas) { position:relative; z-index:2; } /* Кнопки и текст поверх леса */
-#menu { position:fixed; inset:0; background:radial-gradient(circle at 50% 30%, #1a1020, #05050a 70%); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:90; overflow:hidden; }
-#menu::before { content:''; position:absolute; inset:0; background:url('https://www.transparenttextures.com/patterns/fog.png') repeat; opacity:0.15; animation: fogMove 20s linear infinite; pointer-events:none; }
-@keyframes fogMove { 0% { background-position:0 0; } 100% { background-position:300px 300px; } }
 
-/* --- ГЛАЗА --- */
-#eyes { position:absolute; top:20%; display:flex; gap:40px; opacity:0; animation: eyesAppear 3s forwards, lookAround 8s infinite 3s; z-index:91; }
-.eye { width:40px; height:40px; background:#fff; border-radius:50%; box-shadow:0 0 30px 10px rgba(255,255,255,0.6); position:relative; }
-.eye::after { content:''; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:12px; height:12px; background:#000; border-radius:50%; }
-
-@keyframes eyesAppear {
-  0% { opacity:0; transform:scale(0.2) translateY(20px); }
-  100% { opacity:1; transform:scale(1) translateY(0); }
-}
-@keyframes lookAround {
-  0%, 100% { transform:translateX(0); }
-  25% { transform:translateX(-15px); }
-  75% { transform:translateX(15px); }
-}
+/* --- МЕНЮ С 3D ЛЕСОМ --- */
+#menu-canvas { position:absolute; inset:0; width:100%; height:100%; z-index:0; }
+#menu > *:not(#menu-canvas) { position:relative; z-index:2; }
+#menu { position:fixed; inset:0; background:radial-gradient(circle at 50% 30%,#1a1020,#05050a 70%); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:90; overflow:hidden; }
 .menu-title { font-size:3rem; font-weight:900; letter-spacing:6px; color:#e33; text-shadow:0 0 25px #e336; }
 .menu-sub { font-size:.85rem; color:#888; margin:6px 0 36px; letter-spacing:3px; }
 .menu-foot { position:absolute; bottom:16px; font-size:.7rem; color:#555; }
 .btn { width:80%; max-width:320px; padding:14px; margin:7px 0; font-size:1rem; font-weight:600; color:#eee; background:#1c1c26; border:1px solid #333; border-radius:10px; cursor:pointer; transition:.15s; }
 .btn:hover { background:#2a2a3a; border-color:#e33; }
 .btn:active { transform:scale(.97); }
+
+/* --- ГЛАЗА В ТУМАНЕ --- */
+#eyes { position:absolute; top:20%; display:flex; gap:40px; opacity:0; animation: eyesAppear 3s forwards, lookAround 8s infinite 3s; z-index:91; }
+.eye { width:40px; height:40px; background:#fff; border-radius:50%; box-shadow:0 0 30px 10px rgba(255,255,255,0.6); position:relative; }
+.eye::after { content:''; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:12px; height:12px; background:#000; border-radius:50%; }
+@keyframes eyesAppear { 0% { opacity:0; transform:scale(0.2) translateY(20px); } 100% { opacity:1; transform:scale(1) translateY(0); } }
+@keyframes lookAround { 0%, 100% { transform:translateX(0); } 25% { transform:translateX(-15px); } 75% { transform:translateX(15px); } }
+@keyframes fogMove { 0% { background-position:0 0; } 100% { background-position:300px 300px; } }
+#menu::before { content:''; position:absolute; inset:0; background:url('https://www.transparenttextures.com/patterns/fog.png') repeat; opacity:0.15; animation: fogMove 20s linear infinite; pointer-events:none; z-index:1; }
+
+/* --- НАСТРОЙКИ --- */
 #settings { position:fixed; inset:0; background:#0c0c14; z-index:95; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; }
 .settings-title { font-size:1.6rem; font-weight:800; margin-bottom:26px; color:#e33; }
 .row { width:100%; max-width:340px; display:flex; align-items:center; justify-content:space-between; margin:12px 0; font-size:.9rem; color:#bbb; }
 .row select, .row input[type=range] { width:150px; accent-color:#e33; }
 .row select { background:#1c1c26; color:#eee; border:1px solid #333; border-radius:8px; padding:8px; }
 #settings .btn { margin-top:26px; }
+
+/* --- ИГРА --- */
 #game { position:fixed; inset:0; background:#000; z-index:50; }
 #scene { width:100%; height:100%; display:block; }
 #hint { position:absolute; bottom:22%; left:50%; transform:translateX(-50%); background:#000a; padding:8px 16px; border-radius:8px; font-size:.85rem; border:1px solid #e335; color:#fff; pointer-events:none; }
@@ -72,6 +70,8 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000; font-fami
 </style>
 </head>
 <body>
+
+<!-- ЭКРАН ЗАГРУЗКИ -->
 <div id="loader">
   <div class="loader-box">
     <div class="loader-title">КЭТ НАП</div>
@@ -80,20 +80,22 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000; font-fami
     <div id="loadText">Загрузка...</div>
   </div>
 </div>
+
+<!-- ГЛАВНОЕ МЕНЮ -->
 <div id="menu">
   <canvas id="menu-canvas"></canvas>
-  <!-- ГЛАЗА В ТУМАНЕ -->
   <div id="eyes">
     <div class="eye"></div>
     <div class="eye"></div>
   </div>
-
   <div class="menu-title">КЭТ НАП</div>
   <div class="menu-sub">Poppy Playtime: Night Shift</div>
   <button class="btn" id="btnStart">▶ Глава 1 — НАЧАЛО</button>
   <button class="btn" id="btnSettings">⚙ Настройки</button>
   <div class="menu-foot">v0.1 • мобильная версия</div>
 </div>
+
+<!-- НАСТРОЙКИ -->
 <div id="settings" class="hidden">
   <div class="settings-title">Настройки</div>
   <label class="row">Качество графики
@@ -108,6 +110,8 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000; font-fami
   <label class="row">Громкость <input type="range" id="setVol" min="0" max="100" value="70"></label>
   <button class="btn" id="btnBack">← Назад</button>
 </div>
+
+<!-- ИГРОВОЙ КОНТЕЙНЕР -->
 <div id="game" class="hidden">
   <canvas id="scene"></canvas>
   <div id="hint" class="hidden">Нажми E / кнопку</div>
@@ -125,9 +129,10 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000; font-fami
     <div id="levelLoadText">Загрузка...</div>
   </div>
 </div>
+
 <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
 <script>
-  // --- ЧАСТЬ 2: ДВИЖОК И ИГРОК ---
+// --- ЧАСТЬ 2: ДВИЖОК, ИГРОК И 3D-ЛЕС В МЕНЮ ---
 window.Game = {
   renderer: null, scene: null, camera: null, clock: null, running: false, paused: false,
   isMobile: /Android|iPhone|iPad|iPod/i.test(navigator.userAgent),
@@ -331,7 +336,7 @@ Game.showDialog = function(text, onNext) {
 };
 
 Game.startGame = function(firstLevel) {
-  cancelAnimationFrame(menuAnimId);
+  cancelAnimationFrame(window.menuAnimId);
   document.getElementById('menu').classList.add('hidden');
   document.getElementById('game').classList.remove('hidden');
   if (!Game.clock) Game.clock = new Game.THREE.Clock();
@@ -365,7 +370,6 @@ Game.applySettingsFromUI = function() {
 
 // --- ИГРОК ---
 window.Player = {};
-
 Player.create = function(scene, camera, opts) {
   opts = opts || {};
   const THREE = Game.THREE;
@@ -377,7 +381,6 @@ Player.create = function(scene, camera, opts) {
   };
   camera.position.copy(p.position);
   Player.setupLook(p);
-
   p.update = function(dt) {
     if (!p.enabled) return;
     const THREE = Game.THREE;
@@ -395,7 +398,6 @@ Player.create = function(scene, camera, opts) {
       if (!Player.collide(p, nx, p.position.z)) p.position.x = nx;
       if (!Player.collide(p, p.position.x, nz)) p.position.z = nz;
       
-      // Звук шагов
       p.stepTimer = (p.stepTimer || 0) + dt;
       if (p.stepTimer > 0.5) {
         p.stepTimer = 0;
@@ -404,7 +406,6 @@ Player.create = function(scene, camera, opts) {
         p.stepAudio.play().catch(function(){});
       }
     }
-    
     p.velocityY += p.gravity * dt;
     p.position.y += p.velocityY * dt;
     if (p.position.y < p.height) { p.position.y = p.height; p.velocityY = 0; p.grounded = true; }
@@ -419,7 +420,6 @@ Player.create = function(scene, camera, opts) {
       }
     }
   };
-
   p.addInteractable = function(mesh, label, onInteract) {
     mesh.userData.interact = true;
     mesh.userData.label = label;
@@ -431,7 +431,6 @@ Player.create = function(scene, camera, opts) {
     mesh.userData.marker = marker;
     return mesh;
   };
-
   p.addCollider = function(box3) { p.colliders.push(box3); };
   p.teleport = function(x, y, z, yaw) {
     p.position.set(x, y !== undefined ? y : p.height, z !== undefined ? z : 0);
@@ -521,17 +520,10 @@ Player.makeMarker = function() {
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = 128;
   const ctx = canvas.getContext('2d');
-  ctx.beginPath();
-  ctx.arc(64, 64, 56, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(220,40,40,0.9)';
-  ctx.fill();
-  ctx.lineWidth = 6;
-  ctx.strokeStyle = '#fff';
-  ctx.stroke();
-  ctx.fillStyle = '#fff';
-  ctx.font = 'bold 92px Arial';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
+  ctx.beginPath(); ctx.arc(64, 64, 56, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(220,40,40,0.9)'; ctx.fill();
+  ctx.lineWidth = 6; ctx.strokeStyle = '#fff'; ctx.stroke();
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 92px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText('!', 64, 68);
   const tex = new THREE.CanvasTexture(canvas);
   tex.needsUpdate = true;
@@ -576,6 +568,49 @@ Player.buildRoom = function(scene, w, d, h, matFloor, matWall) {
   scene.add(group);
   return group;
 };
+
+// --- 3D ЛЕС В МЕНЮ ---
+let menuScene, menuCamera, menuRenderer;
+window.menuAnimId = null;
+
+function initMenuForest() {
+  const canvas = document.getElementById('menu-canvas');
+  if (!canvas) return;
+  menuScene = new THREE.Scene();
+  menuScene.background = new THREE.Color(0x05050a);
+  menuScene.fog = new THREE.Fog(0x05050a, 5, 30);
+  menuCamera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+  menuCamera.position.set(0, 3, 10);
+  menuRenderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: false });
+  menuRenderer.setSize(window.innerWidth, window.innerHeight);
+  menuRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+
+  const matTrunk = new THREE.MeshStandardMaterial({ color: 0x1a1a1a });
+  const matLeaf  = new THREE.MeshStandardMaterial({ color: 0x0a1a0a });
+  for (let i = 0; i < 30; i++) {
+    const x = (Math.random() - 0.5) * 40;
+    const z = (Math.random() - 0.5) * 40 - 10;
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.3, 4), matTrunk);
+    trunk.position.set(x, 2, z);
+    menuScene.add(trunk);
+    const crown = new THREE.Mesh(new THREE.ConeGeometry(1.5, 4, 5), matLeaf);
+    crown.position.set(x, 5, z);
+    menuScene.add(crown);
+  }
+  const amb = new THREE.AmbientLight(0x223344, 0.5);
+  menuScene.add(amb);
+  const moon = new THREE.DirectionalLight(0x8899cc, 0.6);
+  moon.position.set(-5, 10, 5);
+  menuScene.add(moon);
+
+  function animate() {
+    window.menuAnimId = requestAnimationFrame(animate);
+    menuCamera.position.x = Math.sin(Date.now() * 0.0005) * 2;
+    menuCamera.lookAt(0, 2, -5);
+    menuRenderer.render(menuScene, menuCamera);
+  }
+  animate();
+}
 
 // --- КОНЕЦ ЧАСТИ 2 ---
   // --- ЧАСТЬ 3: УРОВЕНЬ 1 (БАНК) ---
@@ -683,7 +718,6 @@ window.Level1Bank = {
       if (!self.tasks[2].done) { Game.showDialog('Сначала выключи свет.'); return; }
       self.tasks[3].done = true;
       
-      // Звук двери
       if (window.doorAudio) { window.doorAudio.currentTime = 0; window.doorAudio.play().catch(function(){}); }
       else { window.doorAudio = new Audio('door_open.mp3'); window.doorAudio.play().catch(function(){}); }
       
@@ -785,8 +819,19 @@ window.Level1Bank = {
   transitionToStreet: function() {
     Game.paused = true;
     Game.showDialog('Ты выходишь из банка. На улице тихо и темно...', function() {
-      Game.registerLevel('level2_street', window.Level2Street);
-      Game.loadLevel('level2_street');
+      const loadScreen = document.getElementById('levelLoad');
+      const loadText = document.getElementById('levelLoadText');
+      loadScreen.classList.remove('hidden');
+      loadText.textContent = 'Ты едешь домой...';
+      
+      setTimeout(function() {
+        Game.registerLevel('level2_street', window.Level2Street);
+        Game.loadLevel('level2_street');
+        setTimeout(function() {
+          Game.currentLevel.loadHomeStreet();
+        }, 500);
+        loadScreen.classList.add('hidden');
+      }, 3000);
     });
   }
 };
@@ -794,7 +839,7 @@ window.Level1Bank = {
 Game.registerLevel('level1_bank', window.Level1Bank);
 
 // --- КОНЕЦ ЧАСТИ 3 ---
-  // --- ЧАСТЬ 4: УРОВЕНЬ 2 (УЛИЦА И КВАРТИРА) ---
+  // --- ЧАСТЬ 4: УРОВЕНЬ 2 (УЛИЦА, ПОДЪЕЗД, КВАРТИРА) ---
 window.Level2Street = {
   player: null, group: null, stage: '', stageData: {},
 
@@ -906,7 +951,7 @@ window.Level2Street = {
       loadText.textContent = 'Ты сел в машину и едешь домой...';
       
       setTimeout(function() {
-        self.loadEntrance();
+        self.loadHomeStreet();
         loadScreen.classList.add('hidden');
       }, 3000);
     });
@@ -943,6 +988,89 @@ window.Level2Street = {
     Game.scene.add(this.group);
     this.player.interactables.length = 0;
     this.player.colliders.length = 0;
+  },
+
+  loadHomeStreet: function() {
+    const THREE = Game.THREE;
+    const self = this;
+    this.clearGroup();
+    this.stage = 'home_street';
+
+    const textureLoader = new THREE.TextureLoader();
+    const asphaltTex = textureLoader.load('asphalt.jpg');
+    asphaltTex.wrapS = asphaltTex.wrapT = THREE.RepeatWrapping;
+    asphaltTex.repeat.set(8, 8);
+    
+    const brickTex = textureLoader.load('brick.jpg');
+    brickTex.wrapS = brickTex.wrapT = THREE.RepeatWrapping;
+    brickTex.repeat.set(2, 4);
+
+    const matAsphalt = new THREE.MeshStandardMaterial({ map: asphaltTex, roughness: 1 });
+    const matWallBld = new THREE.MeshStandardMaterial({ map: brickTex, roughness: 0.95 });
+
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(60, 80), matAsphalt);
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    this.group.add(ground);
+
+    const building = function(x, z, w, h, d, isHome) {
+      const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), matWallBld);
+      b.position.set(x, h / 2, z);
+      b.castShadow = b.receiveShadow = true;
+      self.group.add(b);
+      Player.addBoxCollider(self.player, b);
+
+      for (let r = 0; r < Math.floor(h/3); r++) {
+        for (let c = 0; c < Math.floor(w/2.5); c++) {
+          const win = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 1.4), new THREE.MeshStandardMaterial({ color: Math.random() > 0.5 ? 0xffd88a : 0x0a0a10, emissive: Math.random() > 0.5 ? 0xffcc66 : 0x000000 }));
+          win.position.set(x - w/2 + 1.5 + c * 2.5, 2 + r * 3, z + (z > 0 ? -d/2 - 0.02 : d/2 + 0.02));
+          win.rotation.y = z > 0 ? Math.PI : 0;
+          self.group.add(win);
+        }
+      }
+
+      if (isHome) {
+        const door = new THREE.Mesh(new THREE.BoxGeometry(1.4, 2.4, 0.15), new THREE.MeshStandardMaterial({ color: 0x5a3d26 }));
+        door.position.set(x, 1.2, z + (z > 0 ? -d/2 - 0.08 : d/2 + 0.08));
+        self.group.add(door);
+        
+        self.player.addInteractable(door, 'открыть дверь в подъезд', function() {
+          if (window.doorAudio) { window.doorAudio.currentTime = 0; window.doorAudio.play().catch(function(){}); }
+          else { window.doorAudio = new Audio('door_open.mp3'); window.doorAudio.play().catch(function(){}); }
+          self.loadEntrance();
+        });
+      }
+    };
+
+    building(0, -10, 12, 15, 8, true);
+    building(-15, -10, 10, 15, 8, false);
+    building(15, -10, 10, 15, 8, false);
+    building(0, 15, 15, 15, 8, false);
+
+    const car = this.makeCar();
+    car.position.set(5, 0, 0);
+    this.group.add(car);
+    this.player.addInteractable(car, 'сесть в машину', function() {
+      if (self.stage !== 'home_street') return;
+      self.stage = 'car';
+      if (window.doorAudio) { window.doorAudio.currentTime = 0; window.doorAudio.play().catch(function(){}); }
+      else { window.doorAudio = new Audio('door_open.mp3'); window.doorAudio.play().catch(function(){}); }
+      
+      const loadScreen = document.getElementById('levelLoad');
+      const loadText = document.getElementById('levelLoadText');
+      loadScreen.classList.remove('hidden');
+      loadText.textContent = 'Ты едешь по лесу... Вдруг машина наезжает на капкан!';
+      
+      setTimeout(function() {
+        Game.registerLevel('level3_forest', window.Level3Forest);
+        Game.loadLevel('level3_forest');
+        loadScreen.classList.add('hidden');
+      }, 4000);
+    });
+
+    this.player.teleport(0, 1.7, 5, Math.PI);
+    Game.showHint('Подойди к двери подъезда (знак «!»).');
+    Game.showDialog('Вот и мой дом. Пора заходить.');
   },
 
   loadEntrance: function() {
@@ -1000,6 +1128,23 @@ window.Level2Street = {
     this.player.teleport(0, 1.7, 18, Math.PI);
 
     this.player.addInteractable(aptDoor, 'открыть квартиру ключом', function() {
+      if (self.stage === 'morning') {
+        if (window.doorAudio) { window.doorAudio.currentTime = 0; window.doorAudio.play().catch(function(){}); }
+        else { window.doorAudio = new Audio('door_open.mp3'); window.doorAudio.play().catch(function(){}); }
+        
+        const loadScreen = document.getElementById('levelLoad');
+        const loadText = document.getElementById('levelLoadText');
+        loadScreen.classList.remove('hidden');
+        loadText.textContent = 'Ты едешь по лесу... Вдруг машина наезжает на капкан!';
+        
+        setTimeout(function() {
+          Game.registerLevel('level3_forest', window.Level3Forest);
+          Game.loadLevel('level3_forest');
+          loadScreen.classList.add('hidden');
+        }, 4000);
+        return;
+      }
+      
       if (self.stage !== 'entrance') return;
       if (window.doorAudio) { window.doorAudio.currentTime = 0; window.doorAudio.play().catch(function(){}); }
       else { window.doorAudio = new Audio('door_open.mp3'); window.doorAudio.play().catch(function(){}); }
@@ -1234,21 +1379,15 @@ window.Level2Street = {
 
     this.player.addInteractable(door, 'выйти из квартиры', function() {
       if (!self.stageData.hasKeys) { Game.showDialog('Сначала возьми ключи.'); return; }
-      self.stage = 'drive';
       
       if (window.doorAudio) { window.doorAudio.currentTime = 0; window.doorAudio.play().catch(function(){}); }
       else { window.doorAudio = new Audio('door_open.mp3'); window.doorAudio.play().catch(function(){}); }
       
-      const loadScreen = document.getElementById('levelLoad');
-      const loadText = document.getElementById('levelLoadText');
-      loadScreen.classList.remove('hidden');
-      loadText.textContent = 'Ты едешь по лесу... Вдруг машина наезжает на капкан!';
-      
+      self.loadEntrance();
       setTimeout(function() {
-        Game.registerLevel('level3_forest', window.Level3Forest);
-        Game.loadLevel('level3_forest');
-        loadScreen.classList.add('hidden');
-      }, 4000);
+        self.player.teleport(0, 1.7, -18.9, 0);
+        Game.showHint('Выйди из подъезда на улицу.');
+      }, 1000);
     });
 
     door.userData.marker.visible = false;
@@ -1259,32 +1398,61 @@ window.Level2Street = {
 Game.registerLevel('level2_street', window.Level2Street);
 
 // --- КОНЕЦ ЧАСТИ 4 ---
-  // --- ЧАСТЬ 5: УРОВЕНЬ 3 (ЛЕС И ИЗБУШКА) ---
+  // --- ЧАСТЬ 5: УРОВЕНЬ 3 (ЛЕС С КАТСЦЕНОЙ) ---
 window.Level3Forest = {
   player: null, group: null, stage: '', stageData: {},
 
   init: function(scene, camera, onProgress) {
     const THREE = Game.THREE;
+    const self = this;
     this.group = new THREE.Group();
     scene.add(this.group);
-    this.player = Player.create(scene, camera, { x: 0, y: 1.7, z: 10, yaw: Math.PI });
-    this.player.speed = 2.6;
-    this.stage = 'crash';
+    this.stage = 'cutscene';
     this.stageData = {};
 
     if (onProgress) onProgress(0.1);
-    this.buildForest();
-    if (onProgress) onProgress(0.5);
-    this.buildCarWreck();
-    if (onProgress) onProgress(0.7);
-    this.buildPath();
-    if (onProgress) onProgress(0.85);
-    this.buildHut();
-    if (onProgress) onProgress(1);
+    
+    // --- КАТСЦЕНА (3-Е ЛИЦО) ---
+    const camCar = this.makeCar();
+    camCar.position.set(0, 0, 10);
+    this.group.add(camCar);
 
-    Game.showDialog('Машина наехала на капкан. Придётся идти пешком.', function() {
-      Game.showHint('Найди тропинку сквозь деревья (знак «!»).');
-    });
+    camera.position.set(0, 4, 20);
+    camera.lookAt(0, 1, 10);
+
+    let camTime = 0;
+    const animInterval = setInterval(function() {
+      camTime += 0.03;
+      camera.position.z = 20 - camTime * 2;
+      camera.lookAt(0, 1, camera.position.z - 10);
+      
+      if (camTime > 3) {
+        clearInterval(animInterval);
+        
+        // Машина "наезжает на капкан"
+        camCar.position.y = -0.5;
+        camCar.rotation.z = 0.2;
+        camCar.rotation.x = 0.1;
+        
+        setTimeout(function() {
+          // Загружаем лес
+          self.buildForest();
+          self.buildCarWreck();
+          self.buildPath();
+          self.buildHut();
+          
+          // Создаём игрока
+          self.player = Player.create(scene, camera, { x: 0, y: 1.7, z: 15, yaw: Math.PI });
+          self.player.speed = 2.6;
+          self.stage = 'crash';
+          
+          Game.showDialog('Машина наехала на капкан. Придётся идти пешком.', function() {
+            Game.showHint('Найди тропинку сквозь деревья (знак «!»).');
+          });
+          if (onProgress) onProgress(1);
+        }, 1000);
+      }
+    }, 30);
   },
 
   update: function(dt) {
@@ -1305,8 +1473,21 @@ window.Level3Forest = {
     }
   },
 
+  makeCar: function() {
+    const THREE = Game.THREE;
+    const g = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.BoxGeometry(2, 0.7, 4), new THREE.MeshStandardMaterial({ color: 0x663333, metalness: 0.3, roughness: 0.7 }));
+    body.position.y = 0.6;
+    g.add(body);
+    const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.6, 2), new THREE.MeshStandardMaterial({ color: 0x222 }));
+    cabin.position.set(0, 1.2, -0.2);
+    g.add(cabin);
+    return g;
+  },
+
   buildForest: function() {
     const THREE = Game.THREE;
+    const self = this;
     const textureLoader = new THREE.TextureLoader();
     const dirtTex = textureLoader.load('dirt.jpg');
     dirtTex.wrapS = dirtTex.wrapT = THREE.RepeatWrapping;
@@ -1341,7 +1522,7 @@ window.Level3Forest = {
       this.group.add(crown);
       
       const box = new THREE.Box3(new THREE.Vector3(x - 0.3, 0, z - 0.3), new THREE.Vector3(x + 0.3, 4, z + 0.3));
-      this.player.addCollider(box);
+      this.player ? this.player.addCollider(box) : null;
     }
 
     const moon = new THREE.DirectionalLight(0x8899cc, 0.5);
@@ -1368,23 +1549,25 @@ window.Level3Forest = {
     g.add(trap);
     g.position.set(0, 0, 10);
     this.group.add(g);
-    Player.addBoxCollider(this.player, body);
+    if (this.player) Player.addBoxCollider(this.player, body);
 
     const trigger = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ visible: false }));
     trigger.position.set(0, 1, 2);
     this.group.add(trigger);
     
-    this.player.addInteractable(trigger, 'пойти по тропинке', function() {
-      if (self.stage !== 'crash') return;
-      self.stage = 'path';
-      trigger.userData.marker.visible = false;
-      Game.showDialog('Ты видишь тропинку сквозь деревья и идёшь по ней.', function() {
-        self.player.teleport(0, 1.7, -5, Math.PI);
-        Game.showHint('Иди по тропинке к избушке.');
-        const hutDoor = self.group.getObjectByName('hutDoor');
-        if (hutDoor) hutDoor.userData.marker.visible = true;
+    if (this.player) {
+      this.player.addInteractable(trigger, 'пойти по тропинке', function() {
+        if (self.stage !== 'crash') return;
+        self.stage = 'path';
+        trigger.userData.marker.visible = false;
+        Game.showDialog('Ты видишь тропинку сквозь деревья и идёшь по ней.', function() {
+          self.player.teleport(0, 1.7, -5, Math.PI);
+          Game.showHint('Иди по тропинке к избушке.');
+          const hutDoor = self.group.getObjectByName('hutDoor');
+          if (hutDoor) hutDoor.userData.marker.visible = true;
+        });
       });
-    });
+    }
   },
 
   buildPath: function() {
@@ -1415,7 +1598,7 @@ window.Level3Forest = {
     walls.position.y = 2;
     walls.castShadow = walls.receiveShadow = true;
     hut.add(walls);
-    Player.addBoxCollider(this.player, walls);
+    if (this.player) Player.addBoxCollider(this.player, walls);
 
     const roof = new THREE.Mesh(new THREE.ConeGeometry(4.5, 2.5, 4), new THREE.MeshStandardMaterial({ color: 0x2a1a10, roughness: 1 }));
     roof.position.y = 5.2;
@@ -1438,17 +1621,19 @@ window.Level3Forest = {
 
     this.group.add(hut);
 
-    this.player.addInteractable(door, 'постучать в дверь', function() {
-      if (self.stage === 'end') return;
-      if (self.stage !== 'path' && self.stage !== 'hut') return;
-      self.stage = 'hut';
-      door.userData.marker.visible = false;
-      
-      if (window.doorAudio) { window.doorAudio.currentTime = 0; window.doorAudio.play().catch(function(){}); }
-      else { window.doorAudio = new Audio('door_open.mp3'); window.doorAudio.play().catch(function(){}); }
-      
-      self.startEnding();
-    });
+    if (this.player) {
+      this.player.addInteractable(door, 'постучать в дверь', function() {
+        if (self.stage === 'end') return;
+        if (self.stage !== 'path' && self.stage !== 'hut') return;
+        self.stage = 'hut';
+        door.userData.marker.visible = false;
+        
+        if (window.doorAudio) { window.doorAudio.currentTime = 0; window.doorAudio.play().catch(function(){}); }
+        else { window.doorAudio = new Audio('door_open.mp3'); window.doorAudio.play().catch(function(){}); }
+        
+        self.startEnding();
+      });
+    }
     door.userData.marker.visible = false;
   },
 
@@ -1471,6 +1656,7 @@ window.Level3Forest = {
             document.getElementById('menu').classList.remove('hidden');
             Game.currentLevel = null;
             Game.player = null;
+            initMenuForest(); // Возвращаем лес в меню
           });
         });
       } else {
@@ -1494,88 +1680,29 @@ window.Level3Forest = {
 
 Game.registerLevel('level3_forest', window.Level3Forest);
 
-// --- ФИНАЛЬНЫЙ ЗАПУСК ---
+// --- ФИНАЛЬНЫЙ ЗАПУСК И ПРИВЯЗКА КНОПОК ---
 window.addEventListener('DOMContentLoaded', function() {
   const loader = document.getElementById('loader');
   if (loader) loader.style.display = 'none';
 
-  const btnStart = document.getElementById('btnStart');
-  if (btnStart) {
-    btnStart.addEventListener('click', function() {
-      Game.startGame('level1_bank');
-    });
-  }
+  initMenuForest(); // Запускаем лес в меню
 
-  const btnSettings = document.getElementById('btnSettings');
-  if (btnSettings) {
-    btnSettings.addEventListener('click', function() {
-      document.getElementById('menu').classList.add('hidden');
-      document.getElementById('settings').classList.remove('hidden');
-    });
-  }
+  document.getElementById('btnStart').addEventListener('click', function() {
+    Game.startGame('level1_bank');
+  });
 
-  const btnBack = document.getElementById('btnBack');
-  if (btnBack) {
-    btnBack.addEventListener('click', function() {
-      Game.applySettingsFromUI();
-      document.getElementById('settings').classList.add('hidden');
-      document.getElementById('menu').classList.remove('hidden');
-    });
-  }
+  document.getElementById('btnSettings').addEventListener('click', function() {
+    document.getElementById('menu').classList.add('hidden');
+    document.getElementById('settings').classList.remove('hidden');
+  });
+
+  document.getElementById('btnBack').addEventListener('click', function() {
+    Game.applySettingsFromUI();
+    document.getElementById('settings').classList.add('hidden');
+    document.getElementById('menu').classList.remove('hidden');
+  });
 });
-// --- 3D ЛЕС В МЕНЮ ---
-let menuScene, menuCamera, menuRenderer, menuAnimId;
 
-function initMenuForest() {
-  const canvas = document.getElementById('menu-canvas');
-  if (!canvas) return;
-
-  menuScene = new THREE.Scene();
-  menuScene.background = new THREE.Color(0x05050a);
-  menuScene.fog = new THREE.Fog(0x05050a, 5, 30); // Туман
-
-  menuCamera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
-  menuCamera.position.set(0, 3, 10);
-
-  menuRenderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: false });
-  menuRenderer.setSize(window.innerWidth, window.innerHeight);
-  menuRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
-
-  // Деревья
-  const matTrunk = new THREE.MeshStandardMaterial({ color: 0x1a1a1a });
-  const matLeaf  = new THREE.MeshStandardMaterial({ color: 0x0a1a0a });
-  for (let i = 0; i < 30; i++) {
-    const x = (Math.random() - 0.5) * 40;
-    const z = (Math.random() - 0.5) * 40 - 10;
-    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.3, 4), matTrunk);
-    trunk.position.set(x, 2, z);
-    menuScene.add(trunk);
-    const crown = new THREE.Mesh(new THREE.ConeGeometry(1.5, 4, 5), matLeaf);
-    crown.position.set(x, 5, z);
-    menuScene.add(crown);
-  }
-
-  // Свет
-  const amb = new THREE.AmbientLight(0x223344, 0.5);
-  menuScene.add(amb);
-  const moon = new THREE.DirectionalLight(0x8899cc, 0.6);
-  moon.position.set(-5, 10, 5);
-  menuScene.add(moon);
-
-  // Анимация
-  function animate() {
-    menuAnimId = requestAnimationFrame(animate);
-    menuCamera.position.x = Math.sin(Date.now() * 0.0005) * 2; // Камера плавно летит
-    menuCamera.lookAt(0, 2, -5);
-    menuRenderer.render(menuScene, menuCamera);
-  }
-  animate();
-}
-
-// Запускаем лес при загрузке страницы
-window.addEventListener('DOMContentLoaded', function() {
-  initMenuForest();
-});
 </script>
 </body>
 </html>
