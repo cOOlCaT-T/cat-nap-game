@@ -16,6 +16,8 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000; font-fami
 .bar { width:100%; height:8px; background:#222; border-radius:6px; overflow:hidden; }
 .bar > div { height:100%; width:0%; background:linear-gradient(90deg,#e33,#f77); transition:width .3s; }
 #loadText { margin-top:10px; font-size:.8rem; color:#777; }
+  #menu-canvas { position:absolute; inset:0; width:100%; height:100%; z-index:0; }
+#menu > *:not(#menu-canvas) { position:relative; z-index:2; } /* Кнопки и текст поверх леса */
 #menu { position:fixed; inset:0; background:radial-gradient(circle at 50% 30%, #1a1020, #05050a 70%); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:90; overflow:hidden; }
 #menu::before { content:''; position:absolute; inset:0; background:url('https://www.transparenttextures.com/patterns/fog.png') repeat; opacity:0.15; animation: fogMove 20s linear infinite; pointer-events:none; }
 @keyframes fogMove { 0% { background-position:0 0; } 100% { background-position:300px 300px; } }
@@ -79,6 +81,7 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000; font-fami
   </div>
 </div>
 <div id="menu">
+  <canvas id="menu-canvas"></canvas>
   <!-- ГЛАЗА В ТУМАНЕ -->
   <div id="eyes">
     <div class="eye"></div>
@@ -328,6 +331,7 @@ Game.showDialog = function(text, onNext) {
 };
 
 Game.startGame = function(firstLevel) {
+  cancelAnimationFrame(menuAnimId);
   document.getElementById('menu').classList.add('hidden');
   document.getElementById('game').classList.remove('hidden');
   if (!Game.clock) Game.clock = new Game.THREE.Clock();
@@ -1519,7 +1523,59 @@ window.addEventListener('DOMContentLoaded', function() {
     });
   }
 });
+// --- 3D ЛЕС В МЕНЮ ---
+let menuScene, menuCamera, menuRenderer, menuAnimId;
 
+function initMenuForest() {
+  const canvas = document.getElementById('menu-canvas');
+  if (!canvas) return;
+
+  menuScene = new THREE.Scene();
+  menuScene.background = new THREE.Color(0x05050a);
+  menuScene.fog = new THREE.Fog(0x05050a, 5, 30); // Туман
+
+  menuCamera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+  menuCamera.position.set(0, 3, 10);
+
+  menuRenderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: false });
+  menuRenderer.setSize(window.innerWidth, window.innerHeight);
+  menuRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+
+  // Деревья
+  const matTrunk = new THREE.MeshStandardMaterial({ color: 0x1a1a1a });
+  const matLeaf  = new THREE.MeshStandardMaterial({ color: 0x0a1a0a });
+  for (let i = 0; i < 30; i++) {
+    const x = (Math.random() - 0.5) * 40;
+    const z = (Math.random() - 0.5) * 40 - 10;
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.3, 4), matTrunk);
+    trunk.position.set(x, 2, z);
+    menuScene.add(trunk);
+    const crown = new THREE.Mesh(new THREE.ConeGeometry(1.5, 4, 5), matLeaf);
+    crown.position.set(x, 5, z);
+    menuScene.add(crown);
+  }
+
+  // Свет
+  const amb = new THREE.AmbientLight(0x223344, 0.5);
+  menuScene.add(amb);
+  const moon = new THREE.DirectionalLight(0x8899cc, 0.6);
+  moon.position.set(-5, 10, 5);
+  menuScene.add(moon);
+
+  // Анимация
+  function animate() {
+    menuAnimId = requestAnimationFrame(animate);
+    menuCamera.position.x = Math.sin(Date.now() * 0.0005) * 2; // Камера плавно летит
+    menuCamera.lookAt(0, 2, -5);
+    menuRenderer.render(menuScene, menuCamera);
+  }
+  animate();
+}
+
+// Запускаем лес при загрузке страницы
+window.addEventListener('DOMContentLoaded', function() {
+  initMenuForest();
+});
 </script>
 </body>
 </html>
