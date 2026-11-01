@@ -1467,7 +1467,36 @@ window.Level3Forest = {
 
 Game.registerLevel('level3_forest', window.Level3Forest);
 
-// --- КОНЕЦ ЧАСТИ 5 ---
+// --- ФИНАЛЬНЫЙ ЗАПУСК ---
+window.addEventListener('DOMContentLoaded', function() {
+  const loader = document.getElementById('loader');
+  if (loader) loader.style.display = 'none';
+
+  const btnStart = document.getElementById('btnStart');
+  if (btnStart) {
+    btnStart.addEventListener('click', function() {
+      Game.startGame('level1_bank');
+    });
+  }
+
+  const btnSettings = document.getElementById('btnSettings');
+  if (btnSettings) {
+    btnSettings.addEventListener('click', function() {
+      document.getElementById('menu').classList.add('hidden');
+      document.getElementById('settings').classList.remove('hidden');
+    });
+  }
+
+  const btnBack = document.getElementById('btnBack');
+  if (btnBack) {
+    btnBack.addEventListener('click', function() {
+      Game.applySettingsFromUI();
+      document.getElementById('settings').classList.add('hidden');
+      document.getElementById('menu').classList.remove('hidden');
+    });
+  }
+});
+
 </script>
 </body>
 </html>
