@@ -5,7 +5,52 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Кэт Нап — Начало</title>
 <link rel="icon" href="data:,">
-<link rel="stylesheet" href="style.css">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html,body { width:100%; height:100%; overflow:hidden; background:#000; font-family:'Segoe UI',Arial,sans-serif; color:#eee; user-select:none; }
+.hidden { display:none !important; }
+#loader { position:fixed; inset:0; background:#0a0a0f; display:flex; align-items:center; justify-content:center; z-index:100; }
+.loader-box { width:80%; max-width:380px; text-align:center; }
+.loader-title { font-size:2.4rem; font-weight:800; letter-spacing:4px; color:#e33; text-shadow:0 0 18px #e338; }
+.loader-sub { font-size:.9rem; color:#888; margin:6px 0 22px; letter-spacing:2px; }
+.bar { width:100%; height:8px; background:#222; border-radius:6px; overflow:hidden; }
+.bar > div { height:100%; width:0%; background:linear-gradient(90deg,#e33,#f77); transition:width .3s; }
+#loadText { margin-top:10px; font-size:.8rem; color:#777; }
+#menu { position:fixed; inset:0; background:radial-gradient(circle at 50% 30%,#1a1020,#05050a 70%); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:90; }
+.menu-title { font-size:3rem; font-weight:900; letter-spacing:6px; color:#e33; text-shadow:0 0 25px #e336; }
+.menu-sub { font-size:.85rem; color:#888; margin:6px 0 36px; letter-spacing:3px; }
+.menu-foot { position:absolute; bottom:16px; font-size:.7rem; color:#555; }
+.btn { width:80%; max-width:320px; padding:14px; margin:7px 0; font-size:1rem; font-weight:600; color:#eee; background:#1c1c26; border:1px solid #333; border-radius:10px; cursor:pointer; transition:.15s; }
+.btn:hover { background:#2a2a3a; border-color:#e33; }
+.btn:active { transform:scale(.97); }
+#settings { position:fixed; inset:0; background:#0c0c14; z-index:95; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; }
+.settings-title { font-size:1.6rem; font-weight:800; margin-bottom:26px; color:#e33; }
+.row { width:100%; max-width:340px; display:flex; align-items:center; justify-content:space-between; margin:12px 0; font-size:.9rem; color:#bbb; }
+.row select, .row input[type=range] { width:150px; accent-color:#e33; }
+.row select { background:#1c1c26; color:#eee; border:1px solid #333; border-radius:8px; padding:8px; }
+#settings .btn { margin-top:26px; }
+#game { position:fixed; inset:0; background:#000; z-index:50; }
+#scene { width:100%; height:100%; display:block; }
+#hint { position:absolute; bottom:22%; left:50%; transform:translateX(-50%); background:#000a; padding:8px 16px; border-radius:8px; font-size:.85rem; border:1px solid #e335; color:#fff; pointer-events:none; }
+#mobile { position:absolute; inset:0; pointer-events:none; }
+#joyZone { position:absolute; bottom:30px; left:30px; width:120px; height:120px; border-radius:50%; background:#ffffff10; border:2px solid #ffffff25; pointer-events:auto; touch-action:none; }
+#joyKnob { position:absolute; top:50%; left:50%; width:52px; height:52px; margin:-26px 0 0 -26px; border-radius:50%; background:#ffffff30; border:2px solid #ffffff50; }
+#btnAction { position:absolute; bottom:60px; right:36px; width:74px; height:74px; border-radius:50%; background:#e332; border:2px solid #e35; color:#fff; font-size:1.8rem; font-weight:800; display:flex; align-items:center; justify-content:center; pointer-events:auto; touch-action:none; }
+#btnAction:active { background:#e336; }
+#btnPause { position:absolute; top:16px; right:16px; width:44px; height:44px; border-radius:10px; background:#0008; border:1px solid #fff3; color:#fff; font-size:1rem; display:flex; align-items:center; justify-content:center; pointer-events:auto; }
+#dialog { position:absolute; bottom:0; left:0; right:0; background:linear-gradient(transparent,#000d 25%); padding:60px 24px 28px; font-size:1.05rem; line-height:1.5; color:#fff; }
+#dialogText { max-width:700px; margin:0 auto; }
+#dialogNext { text-align:center; margin-top:14px; font-size:1.3rem; color:#e33; animation:blink 1s infinite; cursor:pointer; }
+@keyframes blink { 50% { opacity:.2; } }
+#levelLoad { position:absolute; inset:0; background:#05050a; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:60; }
+#levelLoad .bar { width:70%; max-width:360px; }
+#levelLoadText { margin-top:12px; font-size:.85rem; color:#888; }
+@media (max-width:500px) {
+  .menu-title { font-size:2.2rem; }
+  #joyZone { width:100px; height:100px; left:20px; bottom:24px; }
+  #btnAction { width:64px; height:64px; right:28px; bottom:50px; font-size:1.5rem; }
+}
+</style>
 </head>
 <body>
 <div id="loader">
@@ -54,13 +99,1250 @@
     <div id="levelLoadText">Загрузка локации...</div>
   </div>
 </div>
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<script>
+// --- ЧАСТЬ 2.1: ДВИЖОК (ENGINE) ---
+window.Game = {
+  renderer: null, scene: null, camera: null, clock: null, running: false, paused: false,
+  isMobile: /Android|iPhone|iPad|iPod/i.test(navigator.userAgent),
+  settings: { quality: 'medium', shadows: true, resolution: 75, volume: 70 },
+  input: { forward: 0, right: 0, action: false },
+  player: null, currentLevel: null, levels: {}, THREE: null
+};
 
-<!-- Подключаем Three.js и наши скрипты. defer гарантирует порядок загрузки -->
-<script src="https://unpkg.com/three@0.160.0/build/three.min.js" defer></script>
-<script src="js/engine.js" defer></script>
-<script src="js/player.js" defer></script>
-<script src="js/levels/level1_bank.js" defer></script>
-<script src="js/levels/level2_street.js" defer></script>
-<script src="js/levels/level3_forest.js" defer></script>
+window.Game.THREE = window.THREE;
+
+Game.createRenderer = function() {
+  const canvas = document.getElementById('scene');
+  const renderer = new Game.THREE.WebGLRenderer({ canvas: canvas, antialias: Game.settings.quality !== 'low', powerPreference: 'high-performance' });
+  Game.applyQuality(renderer);
+  Game.renderer = renderer;
+};
+
+Game.applyQuality = function(renderer) {
+  const q = Game.settings.quality;
+  const dpr = Math.min(window.devicePixelRatio || 1, q === 'low' ? 1 : q === 'medium' ? 1.5 : 2);
+  renderer.setPixelRatio(dpr * (Game.settings.resolution / 100));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.shadowMap.enabled = Game.settings.shadows && q !== 'low';
+  renderer.shadowMap.type = Game.THREE.PCFSoftShadowMap;
+  renderer.toneMapping = Game.THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = q === 'low' ? 0.9 : 1.0;
+};
+
+Game.createScene = function() {
+  const scene = new Game.THREE.Scene();
+  scene.background = new Game.THREE.Color(0x05050a);
+  scene.fog = new Game.THREE.Fog(0x05050a, 20, 80);
+  Game.scene = scene;
+  const camera = new Game.THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 200);
+  camera.position.set(0, 1.7, 5);
+  Game.camera = camera;
+};
+
+Game.addLights = function(scene, opts) {
+  opts = opts || {};
+  const amb = new Game.THREE.AmbientLight(0x404060, opts.ambient || 0.6);
+  scene.add(amb);
+  const hemi = new Game.THREE.HemisphereLight(0x8899ff, 0x221100, opts.hemi || 0.4);
+  scene.add(hemi);
+  const dir = new Game.THREE.DirectionalLight(0xffeedd, opts.dir || 0.8);
+  dir.position.set(5, 12, 6);
+  if (Game.settings.shadows) {
+    dir.castShadow = true;
+    dir.shadow.mapSize.set(1024, 1024);
+    dir.shadow.camera.near = 1;
+    dir.shadow.camera.far = 50;
+    dir.shadow.camera.left = -20;
+    dir.shadow.camera.right = 20;
+    dir.shadow.camera.top = 20;
+    dir.shadow.camera.bottom = -20;
+  }
+  scene.add(dir);
+};
+
+Game.registerLevel = function(name, levelObj) {
+  Game.levels[name] = levelObj;
+};
+
+Game.loadLevel = function(name) {
+  if (Game.currentLevel && Game.currentLevel.dispose) {
+    try { Game.currentLevel.dispose(); } catch (e) { console.warn(e); }
+  }
+  Game.scene.clear();
+  Game.scene.background = new Game.THREE.Color(0x05050a);
+  Game.scene.fog = new Game.THREE.Fog(0x05050a, 20, 80);
+  Game.addLights(Game.scene, { ambient: 0.5, hemi: 0.35, dir: 0.7 });
+  Game.input.forward = Game.input.right = 0;
+
+  const level = Game.levels[name];
+  if (!level) { console.error('Уровень не найден:', name); return; }
+
+  Game.showLevelLoad(true);
+  level.init(Game.scene, Game.camera, function(p) {
+    Game.setLevelProgress(p * 100);
+  });
+  Game.setLevelProgress(100);
+  
+  setTimeout(function() {
+    Game.showLevelLoad(false);
+    Game.currentLevel = level;
+  }, 300);
+};
+
+Game.showLevelLoad = function(show) {
+  const el = document.getElementById('levelLoad');
+  if (!el) return;
+  if (show) el.classList.remove('hidden'); else el.classList.add('hidden');
+  if (show) Game.setLevelProgress(0);
+};
+
+Game.setLevelProgress = function(p) {
+  const fill = document.getElementById('levelBarFill');
+  const txt = document.getElementById('levelLoadText');
+  if (fill) fill.style.width = p + '%';
+  if (txt) txt.textContent = 'Загрузка локации... ' + Math.round(p) + '%';
+};
+
+Game.loop = function() {
+  if (!Game.running) return;
+  requestAnimationFrame(Game.loop);
+  const dt = Math.min(Game.clock.getDelta(), 0.1);
+  if (!Game.paused && Game.currentLevel && Game.currentLevel.update) Game.currentLevel.update(dt, Game);
+  if (!Game.paused && Game.player && Game.player.update) Game.player.update(dt, Game);
+  if (Game.renderer && Game.scene && Game.camera) Game.renderer.render(Game.scene, Game.camera);
+};
+
+Game.setupKeyboard = function() {
+  const map = { KeyW: 'forward+', KeyS: 'forward-', KeyA: 'right-', KeyD: 'right+', ArrowUp: 'forward+', ArrowDown: 'forward-', ArrowLeft: 'right-', ArrowRight: 'right+' };
+  window.addEventListener('keydown', function(e) {
+    if (map[e.code]) { e.preventDefault(); Game.applyMove(map[e.code], true); }
+    if (e.code === 'KeyE' || e.code === 'Space') Game.input.action = true;
+    if (e.code === 'Escape') Game.togglePause();
+  });
+  window.addEventListener('keyup', function(e) {
+    if (map[e.code]) Game.applyMove(map[e.code], false);
+    if (e.code === 'KeyE' || e.code === 'Space') Game.input.action = false;
+  });
+};
+
+Game.applyMove = function(dir, on) {
+  const val = on ? 1 : 0;
+  if (dir === 'forward+') Game.input.forward = val;
+  if (dir === 'forward-') Game.input.forward = val ? -1 : 0;
+  if (dir === 'right+') Game.input.right = val;
+  if (dir === 'right-') Game.input.right = val ? -1 : 0;
+};
+
+Game.setupMobileControls = function() {
+  if (!Game.isMobile) return;
+  const mob = document.getElementById('mobile');
+  if (mob) mob.classList.remove('hidden');
+  const zone = document.getElementById('joyZone');
+  const knob = document.getElementById('joyKnob');
+  if (!zone || !knob) return;
+  
+  let active = false, cx = 0, cy = 0;
+  const maxDist = 40;
+  zone.addEventListener('touchstart', function(e) {
+    const t = e.changedTouches[0];
+    const r = zone.getBoundingClientRect();
+    cx = r.left + r.width / 2; cy = r.top + r.height / 2;
+    active = true; moveKnob(t.clientX, t.clientY);
+    e.preventDefault();
+  }, { passive: false });
+  zone.addEventListener('touchmove', function(e) {
+    if (!active) return;
+    const t = e.changedTouches[0];
+    moveKnob(t.clientX, t.clientY);
+    e.preventDefault();
+  }, { passive: false });
+  zone.addEventListener('touchend', function() {
+    active = false;
+    knob.style.transform = 'translate(0,0)';
+    Game.input.forward = 0; Game.input.right = 0;
+  });
+  function moveKnob(px, py) {
+    let dx = px - cx, dy = py - cy;
+    const len = Math.hypot(dx, dy);
+    if (len > maxDist) { dx = dx / len * maxDist; dy = dy / len * maxDist; }
+    knob.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+    Game.input.right = dx / maxDist;
+    Game.input.forward = -dy / maxDist;
+  }
+  const btnA = document.getElementById('btnAction');
+  if (btnA) {
+    btnA.addEventListener('touchstart', function(e) { Game.input.action = true; e.preventDefault(); }, { passive: false });
+    btnA.addEventListener('touchend', function() { Game.input.action = false; });
+  }
+  const btnP = document.getElementById('btnPause');
+  if (btnP) btnP.addEventListener('click', Game.togglePause);
+};
+
+Game.togglePause = function() {
+  if (!Game.running) return;
+  Game.paused = !Game.paused;
+  const p = document.getElementById('btnPause');
+  if (p) p.textContent = Game.paused ? '▶' : '❚❚';
+  Game.showHint(Game.paused ? 'Пауза' : null);
+};
+
+Game.showHint = function(text) {
+  const el = document.getElementById('hint');
+  if (!el) return;
+  if (text) { el.textContent = text; el.classList.remove('hidden'); }
+  else el.classList.add('hidden');
+};
+
+Game.showDialog = function(text, onNext) {
+  const box = document.getElementById('dialog');
+  const txt = document.getElementById('dialogText');
+  const nxt = document.getElementById('dialogNext');
+  if (!box || !txt || !nxt) return;
+  box.classList.remove('hidden');
+  txt.textContent = '';
+  let i = 0;
+  const timer = setInterval(function() {
+    txt.textContent += text[i++] || '';
+    if (i >= text.length) clearInterval(timer);
+  }, 22);
+  const handler = function() {
+    nxt.removeEventListener('click', handler);
+    box.classList.add('hidden');
+    if (onNext) onNext();
+  };
+  nxt.addEventListener('click', handler);
+};
+
+Game.startGame = function(firstLevel) {
+  document.getElementById('menu').classList.add('hidden');
+  document.getElementById('game').classList.remove('hidden');
+  if (!Game.clock) Game.clock = new Game.THREE.Clock();
+  if (!Game.renderer) Game.createRenderer();
+  Game.createScene();
+  Game.setupKeyboard();
+  Game.setupMobileControls();
+  window.removeEventListener('resize', Game.onResize);
+  window.addEventListener('resize', Game.onResize);
+  Game.running = true;
+  Game.paused = false;
+  Game.clock.start();
+  Game.loop();
+  Game.loadLevel(firstLevel || 'level1_bank');
+};
+
+Game.onResize = function() {
+  if (!Game.renderer || !Game.camera) return;
+  Game.camera.aspect = window.innerWidth / window.innerHeight;
+  Game.camera.updateProjectionMatrix();
+  Game.applyQuality(Game.renderer);
+};
+
+Game.applySettingsFromUI = function() {
+  Game.settings.quality = document.getElementById('setQuality').value;
+  Game.settings.shadows = document.getElementById('setShadows').checked;
+  Game.settings.resolution = +document.getElementById('setRes').value;
+  Game.settings.volume = +document.getElementById('setVol').value;
+  if (Game.renderer) Game.applyQuality(Game.renderer);
+};
+
+window.addEventListener('DOMContentLoaded', function() {
+  const loader = document.getElementById('loader');
+  if (loader) loader.style.display = 'none';
+  const btnStart = document.getElementById('btnStart');
+  if (btnStart) {
+    btnStart.addEventListener('click', function() { Game.startGame('level1_bank'); });
+  }
+});
+
+// --- КОНЕЦ ЧАСТИ 2.1 ---
+  // --- ЧАСТЬ 2.2: ИГРОК (PLAYER) ---
+window.Player = {};
+
+Player.create = function(scene, camera, opts) {
+  opts = opts || {};
+  const THREE = Game.THREE;
+  const p = {
+    camera: camera,
+    position: new THREE.Vector3(opts.x || 0, opts.y || 1.7, opts.z || 0),
+    yaw: opts.yaw || 0,
+    pitch: 0,
+    speed: opts.speed || 3.2,
+    sprint: false,
+    height: 1.7,
+    gravity: -18,
+    velocityY: 0,
+    grounded: true,
+    radius: 0.35,
+    colliders: [],
+    interactables: [],
+    nearest: null,
+    enabled: true,
+  };
+
+  camera.position.copy(p.position);
+  Player.setupLook(p);
+
+  p.update = function(dt) {
+    if (!p.enabled) return;
+    const THREE = Game.THREE;
+    const fwd = Game.input.forward;
+    const right = Game.input.right;
+
+    if (fwd || right) {
+      const sin = Math.sin(p.yaw), cos = Math.cos(p.yaw);
+      let dx = (-sin * fwd) + (cos * right);
+      let dz = (-cos * fwd) + (-sin * right);
+      const len = Math.hypot(dx, dz);
+      if (len > 0) { dx /= len; dz /= len; }
+      const sp = p.speed * (p.sprint ? 1.7 : 1);
+      const nx = p.position.x + dx * sp * dt;
+      const nz = p.position.z + dz * sp * dt;
+      if (!Player.collide(p, nx, p.position.z)) p.position.x = nx;
+      if (!Player.collide(p, p.position.x, nz)) p.position.z = nz;
+    }
+
+    p.velocityY += p.gravity * dt;
+    p.position.y += p.velocityY * dt;
+    if (p.position.y < p.height) { p.position.y = p.height; p.velocityY = 0; p.grounded = true; }
+
+    p.camera.position.copy(p.position);
+    p.camera.rotation.set(p.pitch, p.yaw, 0, 'YXZ');
+
+    Player.updateNearest(p);
+
+    if (Game.input.action) {
+      Game.input.action = false;
+      if (p.nearest) {
+        const obj = p.nearest;
+        if (obj.userData.onInteract) obj.userData.onInteract(p);
+      }
+    }
+  };
+
+  p.addInteractable = function(mesh, label, onInteract) {
+    mesh.userData.interact = true;
+    mesh.userData.label = label;
+    mesh.userData.onInteract = onInteract;
+    p.interactables.push(mesh);
+    const marker = Player.makeMarker();
+    marker.position.copy(mesh.position).add(new THREE.Vector3(0, 1.2, 0));
+    mesh.add(marker);
+    mesh.userData.marker = marker;
+    return mesh;
+  };
+
+  p.addCollider = function(box3) { p.colliders.push(box3); };
+
+  p.teleport = function(x, y, z, yaw) {
+    p.position.set(x, y !== undefined ? y : p.height, z !== undefined ? z : 0);
+    if (yaw !== undefined) p.yaw = yaw;
+    p.velocityY = 0;
+  };
+
+  Game.player = p;
+  return p;
+};
+
+Player.setupLook = function(p) {
+  const canvas = Game.renderer.domElement;
+  canvas.addEventListener('click', function() {
+    if (!Game.isMobile && !document.pointerLockElement) canvas.requestPointerLock && canvas.requestPointerLock();
+  });
+  document.addEventListener('pointerlockchange', function() {
+    p.lockActive = !!document.pointerLockElement;
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!p.lockActive || Game.isMobile) return;
+    p.yaw -= e.movementX * 0.0025;
+    p.pitch -= e.movementY * 0.0025;
+    Player.clampPitch(p);
+  });
+
+  if (Game.isMobile) {
+    let touching = false, lastX = 0, lastY = 0;
+    canvas.addEventListener('touchstart', function(e) {
+      const t = e.changedTouches[0];
+      if (t.clientX > window.innerWidth * 0.4) { touching = true; lastX = t.clientX; lastY = t.clientY; }
+    }, { passive: true });
+    canvas.addEventListener('touchmove', function(e) {
+      if (!touching) return;
+      const t = e.changedTouches[0];
+      p.yaw -= (t.clientX - lastX) * 0.006;
+      p.pitch -= (t.clientY - lastY) * 0.006;
+      lastX = t.clientX; lastY = t.clientY;
+      Player.clampPitch(p);
+    }, { passive: true });
+    canvas.addEventListener('touchend', function() { touching = false; });
+  }
+};
+
+Player.clampPitch = function(p) {
+  const lim = Math.PI / 2 - 0.05;
+  if (p.pitch > lim) p.pitch = lim;
+  if (p.pitch < -lim) p.pitch = -lim;
+};
+
+Player.collide = function(p, x, z) {
+  const THREE = Game.THREE;
+  const min = new THREE.Vector3(x - p.radius, p.position.y - p.height + 0.1, z - p.radius);
+  const max = new THREE.Vector3(x + p.radius, p.position.y + 0.1, z + p.radius);
+  const testBox = new THREE.Box3(min, max);
+  for (let i = 0; i < p.colliders.length; i++) {
+    if (testBox.intersectsBox(p.colliders[i])) return true;
+  }
+  return false;
+};
+
+Player.updateNearest = function(p) {
+  const THREE = Game.THREE;
+  let best = null, bestDist = 2.4;
+  const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(p.camera.quaternion);
+  
+  for (let i = 0; i < p.interactables.length; i++) {
+    const obj = p.interactables[i];
+    if (!obj.visible) continue;
+    const wp = new THREE.Vector3();
+    obj.getWorldPosition(wp);
+    const dist = wp.distanceTo(p.position);
+    if (dist < bestDist) {
+      const toObj = wp.clone().sub(p.position).normalize();
+      const dot = toObj.dot(forward);
+      if (dot > 0.2 || dist < 1.2) { best = obj; bestDist = dist; }
+    }
+  }
+  
+  if (best !== p.nearest) {
+    if (p.nearest && p.nearest.userData.marker) p.nearest.userData.marker.visible = true;
+    p.nearest = best;
+    if (best && best.userData.label) {
+      Game.showHint(Game.isMobile ? 'Нажми «!»' : 'E — ' + best.userData.label);
+    } else {
+      Game.showHint(null);
+    }
+  }
+};
+
+Player.makeMarker = function() {
+  const THREE = Game.THREE;
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+  ctx.beginPath();
+  ctx.arc(64, 64, 56, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(220,40,40,0.9)';
+  ctx.fill();
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = '#fff';
+  ctx.stroke();
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 92px Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('!', 64, 68);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.needsUpdate = true;
+  const mat = new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true });
+  const sprite = new THREE.Sprite(mat);
+  sprite.scale.set(0.5, 0.5, 0.5);
+  sprite.renderOrder = 999;
+  return sprite;
+};
+
+Player.addBoxCollider = function(player, mesh) {
+  const THREE = Game.THREE;
+  mesh.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(mesh);
+  player.addCollider(box);
+  return box;
+};
+
+Player.buildRoom = function(scene, w, d, h, matFloor, matWall) {
+  const THREE = Game.THREE;
+  const group = new THREE.Group();
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(w, d), matFloor);
+  floor.rotation.x = -Math.PI / 2;
+  floor.receiveShadow = true;
+  group.add(floor);
+  
+  const ceil = new THREE.Mesh(new THREE.PlaneGeometry(w, d), matWall);
+  ceil.rotation.x = Math.PI / 2;
+  ceil.position.y = h;
+  group.add(ceil);
+  
+  const makeWall = function(x, z, rotY, len) {
+    const wall = new THREE.Mesh(new THREE.PlaneGeometry(len, h), matWall);
+    wall.position.set(x, h / 2, z);
+    wall.rotation.y = rotY;
+    wall.receiveShadow = true;
+    group.add(wall);
+    return wall;
+  };
+  
+  makeWall(0, -d / 2, 0, w);
+  makeWall(0, d / 2, Math.PI, w);
+  makeWall(-w / 2, 0, Math.PI / 2, d);
+  makeWall(w / 2, 0, -Math.PI / 2, d);
+  
+  scene.add(group);
+  return group;
+};
+
+// --- КОНЕЦ ЧАСТИ 2.2 ---
+  // --- ЧАСТЬ 2.3: УРОВЕНЬ 1 (БАНК) ---
+window.Level1Bank = {
+  player: null, group: null, tasks: null, mainLights: [],
+
+  init: function(scene, camera, onProgress) {
+    const THREE = Game.THREE;
+    const self = this;
+    this.group = new THREE.Group();
+    scene.add(this.group);
+    this.player = Player.create(scene, camera, { x: 0, y: 1.7, z: 4, yaw: Math.PI });
+    this.player.speed = 2.6;
+    this.tasks = [
+      { id: 'pc', label: 'Выключить компьютер', done: false },
+      { id: 'safe', label: 'Проверить хранилище', done: false },
+      { id: 'light', label: 'Выключить свет', done: false },
+      { id: 'exit', label: 'Закрыть банк на ключ', done: false }
+    ];
+
+    if (onProgress) onProgress(0.15);
+    const matFloor = new THREE.MeshStandardMaterial({ color: 0x6b6f78, roughness: 0.9 });
+    const matWall  = new THREE.MeshStandardMaterial({ color: 0xd8d2c4, roughness: 0.95 });
+    const matWood  = new THREE.MeshStandardMaterial({ color: 0x5a3d26, roughness: 0.8 });
+    const matMetal = new THREE.MeshStandardMaterial({ color: 0x8a8f99, metalness: 0.7, roughness: 0.3 });
+
+    const W = 14, D = 12, H = 3.2;
+    Player.buildRoom(this.group, W, D, H, matFloor, matWall);
+    this.addWallColliders(W, D, H);
+
+    if (onProgress) onProgress(0.35);
+    const desk = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.8, 1.0), matWood);
+    desk.position.set(-3.5, 0.4, -1.5);
+    desk.castShadow = desk.receiveShadow = true;
+    this.group.add(desk);
+    Player.addBoxCollider(this.player, desk);
+
+    const monitor = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.6, 0.1), matMetal);
+    monitor.position.set(-3.5, 1.15, -1.7);
+    this.group.add(monitor);
+    const screenMat = new THREE.MeshStandardMaterial({ color: 0x223355, emissive: 0x2a6aff, emissiveIntensity: 0.9 });
+    const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.5), screenMat);
+    screen.position.set(-3.5, 1.15, -1.64);
+    this.group.add(screen);
+
+    this.player.addInteractable(monitor, 'выключить компьютер', function() {
+      if (self.tasks[0].done) return;
+      self.tasks[0].done = true;
+      screenMat.emissiveIntensity = 0;
+      screenMat.emissive.setHex(0x000000);
+      screenMat.color.setHex(0x111111);
+      self.updateMarkers();
+      self.nextTaskHint();
+    });
+
+    if (onProgress) onProgress(0.5);
+    const vaultDoor = new THREE.Mesh(new THREE.BoxGeometry(2.0, 2.6, 0.2), matMetal);
+    vaultDoor.position.set(5.5, 1.3, -D/2 + 0.12);
+    vaultDoor.castShadow = true;
+    this.group.add(vaultDoor);
+    const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.06, 8, 24), matMetal);
+    wheel.position.set(5.5, 1.4, -D/2 + 0.25);
+    this.group.add(wheel);
+
+    this.player.addInteractable(vaultDoor, 'проверить хранилище', function() {
+      if (self.tasks[1].done) return;
+      if (!self.tasks[0].done) { Game.showDialog('Сначала выключи компьютер.'); return; }
+      self.tasks[1].done = true;
+      Game.showDialog('Хранилище заперто. Всё в порядке.');
+      self.updateMarkers();
+      self.nextTaskHint();
+    });
+
+    if (onProgress) onProgress(0.65);
+    const swPanel = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.4, 0.08), matMetal);
+    swPanel.position.set(-W/2 + 0.1, 1.6, 3);
+    this.group.add(swPanel);
+    this.player.addInteractable(swPanel, 'выключить свет', function() {
+      if (self.tasks[2].done) return;
+      if (!self.tasks[1].done) { Game.showDialog('Сначала проверь хранилище.'); return; }
+      self.tasks[2].done = true;
+      self.mainLights.forEach(function(l) { l.intensity = 0.05; });
+      Game.scene.fog = new THREE.Fog(0x05050a, 8, 40);
+      Game.showDialog('Свет выключен. Пора уходить.');
+      self.updateMarkers();
+      self.nextTaskHint();
+    });
+
+    if (onProgress) onProgress(0.75);
+    const door = new THREE.Mesh(new THREE.BoxGeometry(1.4, 2.4, 0.15), matWood);
+    door.position.set(0, 1.2, D/2 - 0.08);
+    this.group.add(door);
+    this.player.addInteractable(door, 'закрыть банк на ключ', function() {
+      if (self.tasks[3].done) return;
+      if (!self.tasks[2].done) { Game.showDialog('Сначала выключи свет.'); return; }
+      self.tasks[3].done = true;
+      Game.showDialog('Банк закрыт. Ключ в кармане.', function() {
+        self.transitionToStreet();
+      });
+    });
+
+    this.mainLights = [];
+    const lampPositions = [[-4, H-0.2, -3], [4, H-0.2, -3], [0, H-0.2, 2]];
+    lampPositions.forEach(function(pos) {
+      const lamp = new THREE.PointLight(0xfff0dd, 0.9, 12, 2);
+      lamp.position.set(pos[0], pos[1], pos[2]);
+      self.group.add(lamp);
+      self.mainLights.push(lamp);
+      const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.12), new THREE.MeshStandardMaterial({ color: 0xffffee, emissive: 0xffeeaa, emissiveIntensity: 0.6 }));
+      bulb.position.copy(lamp.position);
+      self.group.add(bulb);
+    });
+
+    const emerg = new THREE.PointLight(0xff3333, 0.15, 8);
+    emerg.position.set(0, 2.5, -D/2 + 1);
+    this.group.add(emerg);
+
+    for (let i = 0; i < 2; i++) {
+      const col = new THREE.Mesh(new THREE.BoxGeometry(0.5, H, 0.5), matWall);
+      col.position.set(-2 + i * 4, H/2, 0);
+      col.castShadow = true;
+      this.group.add(col);
+      Player.addBoxCollider(this.player, col);
+    }
+
+    if (onProgress) onProgress(0.9);
+    this.updateMarkers();
+    Game.showHint(null);
+    setTimeout(function() {
+      Game.showDialog('Конец смены. Нужно закончить дела в банке — смотри на знак «!».');
+      self.nextTaskHint();
+    }, 600);
+    if (onProgress) onProgress(1);
+  },
+
+  update: function(dt) {
+    if (this.player) this.player.update(dt);
+    if (this.player) {
+      this.player.interactables.forEach(function(o) {
+        const m = o.userData.marker;
+        if (m && m.visible) m.position.y = 1.2 + Math.sin(Date.now() * 0.003) * 0.1;
+      });
+    }
+  },
+
+  dispose: function() {
+    if (this.group) {
+      this.group.traverse(function(o) { 
+        if (o.geometry) o.geometry.dispose(); 
+        if (o.material) o.material.dispose && o.material.dispose(); 
+      });
+    }
+  },
+
+  addWallColliders: function(W, D, H) {
+    const THREE = Game.THREE;
+    const t = 0.3;
+    const boxes = [
+      { x: 0, z: -D/2 - t/2, w: W + 2*t, d: t },
+      { x: 0, z: D/2 + t/2, w: W + 2*t, d: t },
+      { x: -W/2 - t/2, z: 0, w: t, d: D + 2*t },
+      { x: W/2 + t/2, z: 0, w: t, d: D + 2*t },
+    ];
+    const self = this;
+    boxes.forEach(function(b) {
+      const box = new THREE.Box3(new THREE.Vector3(b.x - b.w/2, 0, b.z - b.d/2), new THREE.Vector3(b.x + b.w/2, H, b.z + b.d/2));
+      self.player.addCollider(box);
+    });
+  },
+
+  updateMarkers: function() {
+    const self = this;
+    this.player.interactables.forEach(function(obj) {
+      const m = obj.userData.marker;
+      if (!m) return;
+      const label = (obj.userData.label || '').toLowerCase();
+      let show = false;
+      if (label.indexOf('компьютер') !== -1) show = !self.tasks[0].done;
+      if (label.indexOf('хранилище') !== -1) show = self.tasks[0].done && !self.tasks[1].done;
+      if (label.indexOf('свет') !== -1) show = self.tasks[1].done && !self.tasks[2].done;
+      if (label.indexOf('ключ') !== -1) show = self.tasks[2].done && !self.tasks[3].done;
+      m.visible = show;
+    });
+  },
+
+  nextTaskHint: function() {
+    const next = this.tasks.find(function(t) { return !t.done; });
+    if (next) Game.showHint('Задача: ' + next.label);
+    else Game.showHint(null);
+  },
+
+  transitionToStreet: function() {
+    const self = this;
+    Game.paused = true;
+    Game.showDialog('Ты выходишь из банка. На улице тихо и темно...', function() {
+      Game.registerLevel('level2_street', window.Level2Street);
+      Game.loadLevel('level2_street');
+    });
+  }
+};
+
+Game.registerLevel('level1_bank', window.Level1Bank);
+
+// --- КОНЕЦ ЧАСТИ 2.3 ---
+  // --- ЧАСТЬ 2.4: УРОВЕНЬ 2 (УЛИЦА И КВАРТИРА) ---
+window.Level2Street = {
+  player: null, group: null, stage: '', stageData: {},
+
+  init: function(scene, camera, onProgress) {
+    const THREE = Game.THREE;
+    this.group = new THREE.Group();
+    scene.add(this.group);
+    this.player = Player.create(scene, camera, { x: 0, y: 1.7, z: 8, yaw: Math.PI });
+    this.player.speed = 2.8;
+    this.stage = 'street';
+    this.stageData = {};
+    if (onProgress) onProgress(0.1);
+    this.buildStreet();
+    if (onProgress) onProgress(0.7);
+    Game.showDialog('Наконец-то смена закончена. Машина стоит рядом.', function() {
+      Game.showHint('Подойди к машине (знак «!»).');
+    });
+    if (onProgress) onProgress(1);
+  },
+
+  update: function(dt) {
+    if (this.player) this.player.update(dt);
+  },
+
+  dispose: function() {
+    if (this.group) {
+      this.group.traverse(function(o) {
+        if (o.geometry) o.geometry.dispose();
+        if (o.material) o.material.dispose && o.material.dispose();
+      });
+    }
+  },
+
+  buildStreet: function() {
+    const THREE = Game.THREE;
+    const self = this;
+    const matAsphalt = new THREE.MeshStandardMaterial({ color: 0x1a1a22, roughness: 1 });
+    const matWallBld = new THREE.MeshStandardMaterial({ color: 0x3a3a44, roughness: 0.95 });
+    const matWindowOff = new THREE.MeshStandardMaterial({ color: 0x0a0a10 });
+    const matWindowOn  = new THREE.MeshStandardMaterial({ color: 0xffd88a, emissive: 0xffcc66, emissiveIntensity: 0.8 });
+
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(60, 80), matAsphalt);
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    this.group.add(ground);
+
+    const building = function(x, z, w, h, d) {
+      const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), matWallBld);
+      b.position.set(x, h / 2, z);
+      b.castShadow = b.receiveShadow = true;
+      self.group.add(b);
+      Player.addBoxCollider(self.player, b);
+      const cols = Math.floor(w / 2.5), rows = Math.floor(h / 3);
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const on = Math.random() > 0.55;
+          const win = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 1.4), on ? matWindowOn : matWindowOff);
+          const wx = x - w/2 + 1.5 + c * 2.5;
+          const wy = 2 + r * 3;
+          const wz = z + (z > 0 ? -d/2 - 0.02 : d/2 + 0.02);
+          win.position.set(wx, wy, wz);
+          win.rotation.y = z > 0 ? Math.PI : 0;
+          self.group.add(win);
+        }
+      }
+    };
+    building(-10, 0, 8, 16, 10);
+    building(10, 0, 8, 16, 10);
+    building(-10, -25, 8, 20, 10);
+    building(10, -25, 8, 20, 10);
+
+    const lampMat = new THREE.MeshStandardMaterial({ color: 0xfff0cc, emissive: 0xffdd88, emissiveIntensity: 1 });
+    [[-4, 5], [4, -5], [-4, -18], [4, -30]].forEach(function(pos) {
+      const x = pos[0], z = pos[1];
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 4), new THREE.MeshStandardMaterial({ color: 0x222 }));
+      pole.position.set(x, 2, z);
+      self.group.add(pole);
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.2), lampMat);
+      head.position.set(x, 4, z);
+      self.group.add(head);
+      const light = new THREE.PointLight(0xffcc88, 0.7, 14, 2);
+      light.position.set(x, 4, z);
+      self.group.add(light);
+    });
+
+    const car = this.makeCar();
+    car.position.set(2.5, 0, 6);
+    this.group.add(car);
+    this.player.addInteractable(car, 'сесть в машину', function() {
+      if (self.stage !== 'street') return;
+      self.stage = 'car';
+      Game.showDialog('Ты садишься в машину и едешь домой...', function() {
+        self.loadEntrance();
+      });
+    });
+  },
+
+  makeCar: function() {
+    const THREE = Game.THREE;
+    const g = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.BoxGeometry(2, 0.7, 4), new THREE.MeshStandardMaterial({ color: 0x883333, metalness: 0.4, roughness: 0.5 }));
+    body.position.y = 0.7;
+    body.castShadow = true;
+    g.add(body);
+    const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.6, 2), new THREE.MeshStandardMaterial({ color: 0x222 }));
+    cabin.position.set(0, 1.3, -0.2);
+    g.add(cabin);
+    const hl = new THREE.MeshStandardMaterial({ color: 0xffffee, emissive: 0xffffcc, emissiveIntensity: 1 });
+    [-0.7, 0.7].forEach(function(x) {
+      const l = new THREE.Mesh(new THREE.SphereGeometry(0.15), hl);
+      l.position.set(x, 0.7, -2);
+      g.add(l);
+    });
+    return g;
+  },
+
+  clearGroup: function() {
+    const THREE = Game.THREE;
+    if (!this.group) return;
+    this.group.traverse(function(o) {
+      if (o.geometry) o.geometry.dispose();
+      if (o.material) o.material.dispose && o.material.dispose();
+    });
+    Game.scene.remove(this.group);
+    this.group = new THREE.Group();
+    Game.scene.add(this.group);
+    this.player.interactables.length = 0;
+    this.player.colliders.length = 0;
+  },
+
+  loadEntrance: function() {
+    const THREE = Game.THREE;
+    const self = this;
+    this.clearGroup();
+    this.stage = 'entrance';
+    const matFloor = new THREE.MeshStandardMaterial({ color: 0x555560, roughness: 1 });
+    const matWall  = new THREE.MeshStandardMaterial({ color: 0x8a8a90, roughness: 1 });
+    Player.buildRoom(this.group, 4, 30, 3, matFloor, matWall);
+    
+    const boxes = [
+      new THREE.Box3(new THREE.Vector3(-2.2, 0, -15), new THREE.Vector3(-2, 3, 15)),
+      new THREE.Box3(new THREE.Vector3(2, 0, -15), new THREE.Vector3(2.2, 3, 15)),
+      new THREE.Box3(new THREE.Vector3(-2, 0, 15), new THREE.Vector3(2, 3, 15.2)),
+    ];
+    boxes.forEach(function(b) { self.player.addCollider(b); });
+
+    const door = new THREE.Mesh(new THREE.BoxGeometry(1.2, 2.2, 0.12), new THREE.MeshStandardMaterial({ color: 0x5a3d26 }));
+    door.position.set(0, 1.1, -14.9);
+    this.group.add(door);
+
+    for (let i = -12; i <= 12; i += 6) {
+      const l = new THREE.PointLight(0xffe0b0, 0.5, 8, 2);
+      l.position.set(0, 2.8, i);
+      this.group.add(l);
+    }
+
+    this.player.teleport(0, 1.7, 13, Math.PI);
+    this.player.addInteractable(door, 'открыть квартиру ключом', function() {
+      if (self.stage !== 'entrance') return;
+      self.stage = 'apartment';
+      Game.showDialog('Дверь тихонько открывается...', function() { self.loadApartment(); });
+    });
+    Game.showHint('Поднимись на 5-й этаж (иди вперёд).');
+  },
+
+  loadApartment: function() {
+    const THREE = Game.THREE;
+    const self = this;
+    this.clearGroup();
+    this.stage = 'apartment';
+    const matFloor = new THREE.MeshStandardMaterial({ color: 0x6a5540, roughness: 0.9 });
+    const matWall  = new THREE.MeshStandardMaterial({ color: 0xb0a080, roughness: 1 });
+    const hall = Player.buildRoom(this.group, 8, 7, 3, matFloor, matWall);
+    hall.position.set(0, 0, -2);
+    const kitchen = Player.buildRoom(this.group, 5, 5, 3, matFloor, matWall);
+    kitchen.position.set(7, 0, 2);
+    const bedroom = Player.buildRoom(this.group, 5, 5, 3, matFloor, matWall);
+    bedroom.position.set(-7, 0, 2);
+
+    const hallBoxes = [
+      new THREE.Box3(new THREE.Vector3(-4.2, 0, -5.5), new THREE.Vector3(-4, 3, 1.5)),
+      new THREE.Box3(new THREE.Vector3(4, 0, -5.5), new THREE.Vector3(4.2, 3, 1.5)),
+      new THREE.Box3(new THREE.Vector3(-4, 0, -5.7), new THREE.Vector3(4, 3, -5.5)),
+      new THREE.Box3(new THREE.Vector3(-4, 0, 1.5), new THREE.Vector3(4, 3, 1.7)),
+    ];
+    hallBoxes.forEach(function(b) { self.player.addCollider(b); });
+
+    const hallLight = new THREE.PointLight(0xffdd99, 0.9, 10, 2);
+    hallLight.position.set(0, 2.7, -2);
+    this.group.add(hallLight);
+    const kitLight = new THREE.PointLight(0xffeedd, 0.7, 8, 2);
+    kitLight.position.set(7, 2.7, 2);
+    this.group.add(kitLight);
+    const bedLight = new THREE.PointLight(0x8899ff, 0.4, 6, 2);
+    bedLight.position.set(-7, 2.5, 2);
+    this.group.add(bedLight);
+
+    const table = new THREE.Mesh(new THREE.BoxGeometry(2, 0.8, 1), new THREE.MeshStandardMaterial({ color: 0x5a3d26 }));
+    table.position.set(0, 0.4, -3);
+    this.group.add(table);
+    Player.addBoxCollider(this.player, table);
+
+    const radio = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.3, 0.25), new THREE.MeshStandardMaterial({ color: 0x333333 }));
+    radio.position.set(0, 1.0, -3.2);
+    this.group.add(radio);
+
+    const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.2, 0.1, 16), new THREE.MeshStandardMaterial({ color: 0xdddddd }));
+    bowl.position.set(0, 0.9, -3);
+    bowl.visible = false;
+    this.group.add(bowl);
+
+    const fridge = new THREE.Mesh(new THREE.BoxGeometry(1, 2, 0.8), new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.3 }));
+    fridge.position.set(7, 1, 0);
+    this.group.add(fridge);
+    Player.addBoxCollider(this.player, fridge);
+
+    const bed = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.5, 2), new THREE.MeshStandardMaterial({ color: 0x445577 }));
+    bed.position.set(-7, 0.25, 3);
+    this.group.add(bed);
+    Player.addBoxCollider(this.player, bed);
+
+    this.player.teleport(0, 1.7, 1.0, Math.PI);
+
+    this.player.addInteractable(fridge, 'достать доширак', function() {
+      if (self.stageData.ramen) return;
+      self.stageData.ramen = true;
+      bowl.visible = true;
+      fridge.userData.marker.visible = false;
+      radio.userData.marker.visible = true;
+      Game.showDialog('Доширак готов. Отнеси тарелку в зал и поставь на стол.');
+      Game.showHint('Поставь доширак на стол в зале и включи радио.');
+    });
+
+    this.player.addInteractable(radio, 'включить радио', function() {
+      if (!self.stageData.ramen) return;
+      radio.userData.marker.visible = false;
+      self.playRadioScene(bed);
+    });
+
+    this.player.addInteractable(bed, 'лечь спать', function() {
+      if (!self.stageData.radioDone) { Game.showDialog('Сначала поешь и послушай новости.'); return; }
+      bed.userData.marker.visible = false;
+      Game.showDialog('Ты ложишься на кровать и засыпаешь...', function() {
+        setTimeout(function() { self.loadMorning(); }, 800);
+      });
+    });
+
+    radio.userData.marker.visible = false;
+    bed.userData.marker.visible = false;
+    Game.showDialog('Ты дома. Возьми доширак из холодильника на кухне.');
+    Game.showHint('Сходи на кухню (знак «!»).');
+  },
+
+  playRadioScene: function(bed) {
+    const self = this;
+    this.stageData.radioDone = true;
+    const lines = [
+      'Ты ешь доширак и слушаешь радио...',
+      'РАДИО: «СРОЧНЫЕ НОВОСТИ! Недалеко от города на заводе игрушек случилась мистика!»',
+      'РАДИО: «Все работники за 1 час пропали. На полу кровь и странные следы...»',
+      'РАДИО: «Ни за что не выходите из дома, пока не прояснятся обстоятельства... (помехи)»',
+      'Ты знаешь, что завтра у тебя выходной. Ты решаешь отправиться в то место завтра.',
+    ];
+    let i = 0;
+    const next = function() {
+      if (i >= lines.length) {
+        bed.userData.marker.visible = true;
+        Game.showHint('Иди в спальню и ложись спать.');
+        return;
+      }
+      Game.showDialog(lines[i++], next);
+    };
+    next();
+  },
+
+  loadMorning: function() {
+    const THREE = Game.THREE;
+    const self = this;
+    this.clearGroup();
+    this.stage = 'morning';
+    const matFloor = new THREE.MeshStandardMaterial({ color: 0x6a5540, roughness: 0.9 });
+    const matWall  = new THREE.MeshStandardMaterial({ color: 0xb0a080, roughness: 1 });
+    Player.buildRoom(this.group, 6, 6, 3, matFloor, matWall);
+    const l = new THREE.PointLight(0xaaccff, 1.0, 12, 2);
+    l.position.set(0, 2.7, 0);
+    this.group.add(l);
+
+    const shelf = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.1, 0.4), new THREE.MeshStandardMaterial({ color: 0x5a3d26 }));
+    shelf.position.set(-2, 1.4, -2.7);
+    this.group.add(shelf);
+    const keys = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.06, 0.12), new THREE.MeshStandardMaterial({ color: 0xddaa33, metalness: 0.8, roughness: 0.3 }));
+    keys.position.set(-2, 1.5, -2.7);
+    this.group.add(keys);
+
+    const door = new THREE.Mesh(new THREE.BoxGeometry(1.2, 2.2, 0.1), new THREE.MeshStandardMaterial({ color: 0x5a3d26 }));
+    door.position.set(2, 1.1, 2.9);
+    this.group.add(door);
+
+    this.player.teleport(0, 1.7, 2, Math.PI);
+
+    this.player.addInteractable(keys, 'взять ключи от машины', function() {
+      self.stageData.hasKeys = true;
+      keys.visible = false;
+      keys.userData.marker.visible = false;
+      door.userData.marker.visible = true;
+      Game.showDialog('Ключи в кармане. Пора выходить.');
+    });
+
+    this.player.addInteractable(door, 'выйти из квартиры', function() {
+      if (!self.stageData.hasKeys) { Game.showDialog('Сначала возьми ключи.'); return; }
+      self.stage = 'drive';
+      Game.showDialog('Ты выходишь на улицу и садишься в машину.', function() {
+        Game.showDialog('Ты едешь по лесу... Вдруг машина наезжает на капкан!', function() {
+          Game.registerLevel('level3_forest', window.Level3Forest);
+          Game.loadLevel('level3_forest');
+        });
+      });
+    });
+
+    door.userData.marker.visible = false;
+    Game.showDialog('Утро. Возьми ключи с полки (знак «!»).');
+    Game.showHint('Возьми ключи от машины.');
+  }
+};
+Game.registerLevel('level2_street', window.Level2Street);
+
+// --- КОНЕЦ ЧАСТИ 2.4 ---
+  // --- ЧАСТЬ 2.5: УРОВЕНЬ 3 (ЛЕС И ИЗБУШКА) ---
+window.Level3Forest = {
+  player: null, group: null, stage: '', stageData: {},
+
+  init: function(scene, camera, onProgress) {
+    const THREE = Game.THREE;
+    this.group = new THREE.Group();
+    scene.add(this.group);
+    this.player = Player.create(scene, camera, { x: 0, y: 1.7, z: 10, yaw: Math.PI });
+    this.player.speed = 2.6;
+    this.stage = 'crash';
+    this.stageData = {};
+
+    if (onProgress) onProgress(0.1);
+    this.buildForest();
+    if (onProgress) onProgress(0.5);
+    this.buildCarWreck();
+    if (onProgress) onProgress(0.7);
+    this.buildPath();
+    if (onProgress) onProgress(0.85);
+    this.buildHut();
+    if (onProgress) onProgress(1);
+
+    Game.showDialog('Машина наехала на капкан. Придётся идти пешком.', function() {
+      Game.showHint('Найди тропинку сквозь деревья (знак «!»).');
+    });
+  },
+
+  update: function(dt) {
+    if (this.player) this.player.update(dt);
+    if (this.stage === 'hut') {
+      const t = Date.now() * 0.001;
+      const lamp = this.group.getObjectByName('hutLamp');
+      if (lamp) lamp.intensity = 0.7 + Math.sin(t * 2) * 0.15;
+    }
+  },
+
+  dispose: function() {
+    if (this.group) {
+      this.group.traverse(function(o) {
+        if (o.geometry) o.geometry.dispose();
+        if (o.material) o.material.dispose && o.material.dispose();
+      });
+    }
+  },
+
+  buildForest: function() {
+    const THREE = Game.THREE;
+    const self = this;
+    const matGround = new THREE.MeshStandardMaterial({ color: 0x1a2a15, roughness: 1 });
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(120, 120), matGround);
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    this.group.add(ground);
+
+    Game.scene.fog = new THREE.Fog(0x0a1410, 8, 50);
+    Game.scene.background = new THREE.Color(0x0a1410);
+
+    const matTrunk = new THREE.MeshStandardMaterial({ color: 0x3a2a1a, roughness: 1 });
+    const matLeaf  = new THREE.MeshStandardMaterial({ color: 0x1e3a1e, roughness: 1 });
+    
+    for (let i = 0; i < 60; i++) {
+      const x = (Math.random() - 0.5) * 90;
+      const z = (Math.random() - 0.5) * 90;
+      if (Math.abs(x) < 3 && z < 15 && z > -30) continue;
+      if (Math.hypot(x, z - 10) < 6) continue;
+      
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.3, 4), matTrunk);
+      trunk.position.set(x, 2, z);
+      trunk.castShadow = true;
+      this.group.add(trunk);
+      
+      const crown = new THREE.Mesh(new THREE.ConeGeometry(1.5, 3, 6), matLeaf);
+      crown.position.set(x, 5, z);
+      crown.castShadow = true;
+      this.group.add(crown);
+      
+      const box = new THREE.Box3(new THREE.Vector3(x - 0.3, 0, z - 0.3), new THREE.Vector3(x + 0.3, 4, z + 0.3));
+      this.player.addCollider(box);
+    }
+
+    const moon = new THREE.DirectionalLight(0x8899cc, 0.5);
+    moon.position.set(-10, 20, -10);
+    this.group.add(moon);
+    const amb = new THREE.AmbientLight(0x223344, 0.4);
+    this.group.add(amb);
+  },
+
+  buildCarWreck: function() {
+    const THREE = Game.THREE;
+    const self = this;
+    const g = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.BoxGeometry(2, 0.7, 4), new THREE.MeshStandardMaterial({ color: 0x663333, metalness: 0.3, roughness: 0.7 }));
+    body.position.y = 0.6;
+    body.rotation.z = 0.15;
+    body.rotation.x = -0.1;
+    body.castShadow = true;
+    g.add(body);
+    
+    const trap = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.05, 6, 12), new THREE.MeshStandardMaterial({ color: 0x777777, metalness: 0.9, roughness: 0.3 }));
+    trap.rotation.x = Math.PI / 2;
+    trap.position.set(-0.8, 0.1, 1.5);
+    g.add(trap);
+    g.position.set(0, 0, 10);
+    this.group.add(g);
+    Player.addBoxCollider(this.player, body);
+
+    const trigger = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ visible: false }));
+    trigger.position.set(0, 1, 2);
+    this.group.add(trigger);
+    
+    this.player.addInteractable(trigger, 'пойти по тропинке', function() {
+      if (self.stage !== 'crash') return;
+      self.stage = 'path';
+      trigger.userData.marker.visible = false;
+      Game.showDialog('Ты видишь тропинку сквозь деревья и идёшь по ней.', function() {
+        self.player.teleport(0, 1.7, -5, Math.PI);
+        Game.showHint('Иди по тропинке к избушке.');
+        const hutDoor = self.group.getObjectByName('hutDoor');
+        if (hutDoor) hutDoor.userData.marker.visible = true;
+      });
+    });
+  },
+
+  buildPath: function() {
+    const THREE = Game.THREE;
+    const matPath = new THREE.MeshStandardMaterial({ color: 0x4a3a2a, roughness: 1 });
+    for (let z = 2; z > -28; z -= 2) {
+      const tile = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.6), matPath);
+      tile.rotation.x = -Math.PI / 2;
+      tile.position.set(0, 0.02, z);
+      tile.receiveShadow = true;
+      this.group.add(tile);
+    }
+  },
+
+  buildHut: function() {
+    const THREE = Game.THREE;
+    const self = this;
+    const hut = new THREE.Group();
+    hut.position.set(0, 0, -32);
+
+    const matLog = new THREE.MeshStandardMaterial({ color: 0x4a3320, roughness: 0.95 });
+    const walls = new THREE.Mesh(new THREE.BoxGeometry(6, 4, 5), matLog);
+    walls.position.y = 2;
+    walls.castShadow = walls.receiveShadow = true;
+    hut.add(walls);
+    Player.addBoxCollider(this.player, walls);
+
+    const roof = new THREE.Mesh(new THREE.ConeGeometry(4.5, 2.5, 4), new THREE.MeshStandardMaterial({ color: 0x2a1a10, roughness: 1 }));
+    roof.position.y = 5.2;
+    roof.rotation.y = Math.PI / 4;
+    hut.add(roof);
+
+    const door = new THREE.Mesh(new THREE.BoxGeometry(1.2, 2.2, 0.12), new THREE.MeshStandardMaterial({ color: 0x2a1a10 }));
+    door.position.set(0, 1.1, 2.55);
+    door.name = 'hutDoor';
+    hut.add(door);
+
+    const win = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.8), new THREE.MeshStandardMaterial({ color: 0xffcc66, emissive: 0xffaa33, emissiveIntensity: 0.9 }));
+    win.position.set(1.8, 2, 2.56);
+    hut.add(win);
+
+    const lamp = new THREE.PointLight(0xffaa55, 0.8, 10, 2);
+    lamp.position.set(0, 2.8, 3);
+    lamp.name = 'hutLamp';
+    hut.add(lamp);
+
+    this.group.add(hut);
+
+    this.player.addInteractable(door, 'постучать в дверь', function() {
+      if (self.stage === 'end') return;
+      if (self.stage !== 'path' && self.stage !== 'hut') return;
+      self.stage = 'hut';
+      door.userData.marker.visible = false;
+      self.startEnding();
+    });
+    door.userData.marker.visible = false;
+  },
+
+  startEnding: function() {
+    this.stage = 'end';
+    Game.showHint(null);
+    const lines = [
+      'Ты стучишь в дверь... Тишина.',
+      'Слышны медленные шаги за дверью.',
+      'Дверь медленно открывается...',
+    ];
+    let i = 0;
+    const self = this;
+    const next = function() {
+      if (i >= lines.length) {
+        self.fadeToBlack(function() {
+          Game.showDialog('КОНЕЦ ГЛАВЫ 1 — «НАЧАЛО»', function() {
+            Game.running = false;
+            document.getElementById('game').classList.add('hidden');
+            document.getElementById('menu').classList.remove('hidden');
+            Game.currentLevel = null;
+            Game.player = null;
+          });
+        });
+      } else {
+        Game.showDialog(lines[i++], next);
+      }
+    };
+    next();
+  },
+
+  fadeToBlack: function(cb) {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:#000;opacity:0;transition:opacity 2s;z-index:999;';
+    document.body.appendChild(overlay);
+    requestAnimationFrame(function() { overlay.style.opacity = '1'; });
+    setTimeout(function() {
+      cb();
+      setTimeout(function() { overlay.remove(); }, 500);
+    }, 2200);
+  }
+};
+
+Game.registerLevel('level3_forest', window.Level3Forest);
+
+// --- КОНЕЦ ЧАСТИ 2.5 ---
+</script>
 </body>
 </html>
