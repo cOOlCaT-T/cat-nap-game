@@ -101,7 +101,7 @@ html,body { width:100%; height:100%; overflow:hidden; background:#000; font-fami
 </div>
 <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
 <script>
-// --- ЧАСТЬ 2.1: ДВИЖОК (ENGINE) ---
+// --- ЧАСТЬ 2: ДВИЖОК И ИГРОК ---
 window.Game = {
   renderer: null, scene: null, camera: null, clock: null, running: false, paused: false,
   isMobile: /Android|iPhone|iPad|iPod/i.test(navigator.userAgent),
@@ -109,7 +109,6 @@ window.Game = {
   input: { forward: 0, right: 0, action: false },
   player: null, currentLevel: null, levels: {}, THREE: null
 };
-
 window.Game.THREE = window.THREE;
 
 Game.createRenderer = function() {
@@ -161,9 +160,7 @@ Game.addLights = function(scene, opts) {
   scene.add(dir);
 };
 
-Game.registerLevel = function(name, levelObj) {
-  Game.levels[name] = levelObj;
-};
+Game.registerLevel = function(name, levelObj) { Game.levels[name] = levelObj; };
 
 Game.loadLevel = function(name) {
   if (Game.currentLevel && Game.currentLevel.dispose) {
@@ -179,9 +176,7 @@ Game.loadLevel = function(name) {
   if (!level) { console.error('Уровень не найден:', name); return; }
 
   Game.showLevelLoad(true);
-  level.init(Game.scene, Game.camera, function(p) {
-    Game.setLevelProgress(p * 100);
-  });
+  level.init(Game.scene, Game.camera, function(p) { Game.setLevelProgress(p * 100); });
   Game.setLevelProgress(100);
   
   setTimeout(function() {
@@ -346,40 +341,18 @@ Game.applySettingsFromUI = function() {
   if (Game.renderer) Game.applyQuality(Game.renderer);
 };
 
-window.addEventListener('DOMContentLoaded', function() {
-  const loader = document.getElementById('loader');
-  if (loader) loader.style.display = 'none';
-  const btnStart = document.getElementById('btnStart');
-  if (btnStart) {
-    btnStart.addEventListener('click', function() { Game.startGame('level1_bank'); });
-  }
-});
-
-// --- КОНЕЦ ЧАСТИ 2.1 ---
-  // --- ЧАСТЬ 2.2: ИГРОК (PLAYER) ---
+// --- ИГРОК ---
 window.Player = {};
 
 Player.create = function(scene, camera, opts) {
   opts = opts || {};
   const THREE = Game.THREE;
   const p = {
-    camera: camera,
-    position: new THREE.Vector3(opts.x || 0, opts.y || 1.7, opts.z || 0),
-    yaw: opts.yaw || 0,
-    pitch: 0,
-    speed: opts.speed || 3.2,
-    sprint: false,
-    height: 1.7,
-    gravity: -18,
-    velocityY: 0,
-    grounded: true,
-    radius: 0.35,
-    colliders: [],
-    interactables: [],
-    nearest: null,
-    enabled: true,
+    camera: camera, position: new THREE.Vector3(opts.x || 0, opts.y || 1.7, opts.z || 0),
+    yaw: opts.yaw || 0, pitch: 0, speed: opts.speed || 3.2, sprint: false, height: 1.7,
+    gravity: -18, velocityY: 0, grounded: true, radius: 0.35, colliders: [], interactables: [],
+    nearest: null, enabled: true,
   };
-
   camera.position.copy(p.position);
   Player.setupLook(p);
 
@@ -388,7 +361,6 @@ Player.create = function(scene, camera, opts) {
     const THREE = Game.THREE;
     const fwd = Game.input.forward;
     const right = Game.input.right;
-
     if (fwd || right) {
       const sin = Math.sin(p.yaw), cos = Math.cos(p.yaw);
       let dx = (-sin * fwd) + (cos * right);
@@ -401,16 +373,12 @@ Player.create = function(scene, camera, opts) {
       if (!Player.collide(p, nx, p.position.z)) p.position.x = nx;
       if (!Player.collide(p, p.position.x, nz)) p.position.z = nz;
     }
-
     p.velocityY += p.gravity * dt;
     p.position.y += p.velocityY * dt;
     if (p.position.y < p.height) { p.position.y = p.height; p.velocityY = 0; p.grounded = true; }
-
     p.camera.position.copy(p.position);
     p.camera.rotation.set(p.pitch, p.yaw, 0, 'YXZ');
-
     Player.updateNearest(p);
-
     if (Game.input.action) {
       Game.input.action = false;
       if (p.nearest) {
@@ -433,13 +401,11 @@ Player.create = function(scene, camera, opts) {
   };
 
   p.addCollider = function(box3) { p.colliders.push(box3); };
-
   p.teleport = function(x, y, z, yaw) {
     p.position.set(x, y !== undefined ? y : p.height, z !== undefined ? z : 0);
     if (yaw !== undefined) p.yaw = yaw;
     p.velocityY = 0;
   };
-
   Game.player = p;
   return p;
 };
@@ -449,16 +415,13 @@ Player.setupLook = function(p) {
   canvas.addEventListener('click', function() {
     if (!Game.isMobile && !document.pointerLockElement) canvas.requestPointerLock && canvas.requestPointerLock();
   });
-  document.addEventListener('pointerlockchange', function() {
-    p.lockActive = !!document.pointerLockElement;
-  });
+  document.addEventListener('pointerlockchange', function() { p.lockActive = !!document.pointerLockElement; });
   document.addEventListener('mousemove', function(e) {
     if (!p.lockActive || Game.isMobile) return;
     p.yaw -= e.movementX * 0.0025;
     p.pitch -= e.movementY * 0.0025;
     Player.clampPitch(p);
   });
-
   if (Game.isMobile) {
     let touching = false, lastX = 0, lastY = 0;
     canvas.addEventListener('touchstart', function(e) {
@@ -498,7 +461,6 @@ Player.updateNearest = function(p) {
   const THREE = Game.THREE;
   let best = null, bestDist = 2.4;
   const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(p.camera.quaternion);
-  
   for (let i = 0; i < p.interactables.length; i++) {
     const obj = p.interactables[i];
     if (!obj.visible) continue;
@@ -511,7 +473,6 @@ Player.updateNearest = function(p) {
       if (dot > 0.2 || dist < 1.2) { best = obj; bestDist = dist; }
     }
   }
-  
   if (best !== p.nearest) {
     if (p.nearest && p.nearest.userData.marker) p.nearest.userData.marker.visible = true;
     p.nearest = best;
@@ -540,7 +501,6 @@ Player.makeMarker = function() {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText('!', 64, 68);
-
   const tex = new THREE.CanvasTexture(canvas);
   tex.needsUpdate = true;
   const mat = new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true });
@@ -565,12 +525,10 @@ Player.buildRoom = function(scene, w, d, h, matFloor, matWall) {
   floor.rotation.x = -Math.PI / 2;
   floor.receiveShadow = true;
   group.add(floor);
-  
   const ceil = new THREE.Mesh(new THREE.PlaneGeometry(w, d), matWall);
   ceil.rotation.x = Math.PI / 2;
   ceil.position.y = h;
   group.add(ceil);
-  
   const makeWall = function(x, z, rotY, len) {
     const wall = new THREE.Mesh(new THREE.PlaneGeometry(len, h), matWall);
     wall.position.set(x, h / 2, z);
@@ -579,18 +537,23 @@ Player.buildRoom = function(scene, w, d, h, matFloor, matWall) {
     group.add(wall);
     return wall;
   };
-  
   makeWall(0, -d / 2, 0, w);
   makeWall(0, d / 2, Math.PI, w);
   makeWall(-w / 2, 0, Math.PI / 2, d);
   makeWall(w / 2, 0, -Math.PI / 2, d);
-  
   scene.add(group);
   return group;
 };
 
-// --- КОНЕЦ ЧАСТИ 2.2 ---
-  // --- ЧАСТЬ 2.3: УРОВЕНЬ 1 (БАНК) ---
+window.addEventListener('DOMContentLoaded', function() {
+  const loader = document.getElementById('loader');
+  if (loader) loader.style.display = 'none';
+  const btnStart = document.getElementById('btnStart');
+  if (btnStart) btnStart.addEventListener('click', function() { Game.startGame('level1_bank'); });
+});
+
+// --- КОНЕЦ ЧАСТИ 2 ---
+  // --- ЧАСТЬ 3: УРОВЕНЬ 1 (БАНК) ---
 window.Level1Bank = {
   player: null, group: null, tasks: null, mainLights: [],
 
@@ -609,8 +572,19 @@ window.Level1Bank = {
     ];
 
     if (onProgress) onProgress(0.15);
-    const matFloor = new THREE.MeshStandardMaterial({ color: 0x6b6f78, roughness: 0.9 });
-    const matWall  = new THREE.MeshStandardMaterial({ color: 0xd8d2c4, roughness: 0.95 });
+
+    // Загрузка текстур для банка
+    const textureLoader = new THREE.TextureLoader();
+    const floorTex = textureLoader.load('floor_bank.jpg');
+    floorTex.wrapS = floorTex.wrapT = THREE.RepeatWrapping;
+    floorTex.repeat.set(4, 4);
+
+    const wallTex = textureLoader.load('wall_bank.jpg');
+    wallTex.wrapS = wallTex.wrapT = THREE.RepeatWrapping;
+    wallTex.repeat.set(4, 2);
+
+    const matFloor = new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.4 });
+    const matWall  = new THREE.MeshStandardMaterial({ map: wallTex, roughness: 0.9 });
     const matWood  = new THREE.MeshStandardMaterial({ color: 0x5a3d26, roughness: 0.8 });
     const matMetal = new THREE.MeshStandardMaterial({ color: 0x8a8f99, metalness: 0.7, roughness: 0.3 });
 
@@ -780,7 +754,6 @@ window.Level1Bank = {
   },
 
   transitionToStreet: function() {
-    const self = this;
     Game.paused = true;
     Game.showDialog('Ты выходишь из банка. На улице тихо и темно...', function() {
       Game.registerLevel('level2_street', window.Level2Street);
@@ -791,8 +764,8 @@ window.Level1Bank = {
 
 Game.registerLevel('level1_bank', window.Level1Bank);
 
-// --- КОНЕЦ ЧАСТИ 2.3 ---
-  // --- ЧАСТЬ 2.4: УРОВЕНЬ 2 (УЛИЦА И КВАРТИРА) ---
+// --- КОНЕЦ ЧАСТИ 3 ---
+// --- ЧАСТЬ 4: УРОВЕНЬ 2 (УЛИЦА И КВАРТИРА) ---
 window.Level2Street = {
   player: null, group: null, stage: '', stageData: {},
 
@@ -829,8 +802,19 @@ window.Level2Street = {
   buildStreet: function() {
     const THREE = Game.THREE;
     const self = this;
-    const matAsphalt = new THREE.MeshStandardMaterial({ color: 0x1a1a22, roughness: 1 });
-    const matWallBld = new THREE.MeshStandardMaterial({ color: 0x3a3a44, roughness: 0.95 });
+    const textureLoader = new THREE.TextureLoader();
+    
+    // Текстуры улицы
+    const asphaltTex = textureLoader.load('asphalt.jpg');
+    asphaltTex.wrapS = asphaltTex.wrapT = THREE.RepeatWrapping;
+    asphaltTex.repeat.set(8, 8);
+    
+    const brickTex = textureLoader.load('brick.jpg');
+    brickTex.wrapS = brickTex.wrapT = THREE.RepeatWrapping;
+    brickTex.repeat.set(2, 4);
+
+    const matAsphalt = new THREE.MeshStandardMaterial({ map: asphaltTex, roughness: 1 });
+    const matWallBld = new THREE.MeshStandardMaterial({ map: brickTex, roughness: 0.95 });
     const matWindowOff = new THREE.MeshStandardMaterial({ color: 0x0a0a10 });
     const matWindowOn  = new THREE.MeshStandardMaterial({ color: 0xffd88a, emissive: 0xffcc66, emissiveIntensity: 0.8 });
 
@@ -963,8 +947,19 @@ window.Level2Street = {
     const self = this;
     this.clearGroup();
     this.stage = 'apartment';
-    const matFloor = new THREE.MeshStandardMaterial({ color: 0x6a5540, roughness: 0.9 });
-    const matWall  = new THREE.MeshStandardMaterial({ color: 0xb0a080, roughness: 1 });
+    
+    const textureLoader = new THREE.TextureLoader();
+    const floorTex = textureLoader.load('floor_home.jpg');
+    floorTex.wrapS = floorTex.wrapT = THREE.RepeatWrapping;
+    floorTex.repeat.set(4, 4);
+    
+    const wallTex = textureLoader.load('wall_home.jpg');
+    wallTex.wrapS = wallTex.wrapT = THREE.RepeatWrapping;
+    wallTex.repeat.set(4, 2);
+
+    const matFloor = new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.8 });
+    const matWall  = new THREE.MeshStandardMaterial({ map: wallTex, roughness: 1 });
+
     const hall = Player.buildRoom(this.group, 8, 7, 3, matFloor, matWall);
     hall.position.set(0, 0, -2);
     const kitchen = Player.buildRoom(this.group, 5, 5, 3, matFloor, matWall);
@@ -972,11 +967,18 @@ window.Level2Street = {
     const bedroom = Player.buildRoom(this.group, 5, 5, 3, matFloor, matWall);
     bedroom.position.set(-7, 0, 2);
 
+    // --- ИСПРАВЛЕННЫЕ СТЕНЫ С ПРОЁМАМИ ---
     const hallBoxes = [
-      new THREE.Box3(new THREE.Vector3(-4.2, 0, -5.5), new THREE.Vector3(-4, 3, 1.5)),
-      new THREE.Box3(new THREE.Vector3(4, 0, -5.5), new THREE.Vector3(4.2, 3, 1.5)),
+      // Задняя стена (сплошная)
       new THREE.Box3(new THREE.Vector3(-4, 0, -5.7), new THREE.Vector3(4, 3, -5.5)),
+      // Передняя стена (сплошная)
       new THREE.Box3(new THREE.Vector3(-4, 0, 1.5), new THREE.Vector3(4, 3, 1.7)),
+      // Левая стена (с проёмом в спальню)
+      new THREE.Box3(new THREE.Vector3(-4.2, 0, -5.5), new THREE.Vector3(-4, 3, -1.5)),
+      new THREE.Box3(new THREE.Vector3(-4.2, 0, 0.5), new THREE.Vector3(-4, 3, 1.5)),
+      // Правая стена (с проёмом на кухню)
+      new THREE.Box3(new THREE.Vector3(4, 0, -5.5), new THREE.Vector3(4.2, 3, -1.5)),
+      new THREE.Box3(new THREE.Vector3(4, 0, 0.5), new THREE.Vector3(4.2, 3, 1.5)),
     ];
     hallBoxes.forEach(function(b) { self.player.addCollider(b); });
 
@@ -1119,8 +1121,8 @@ window.Level2Street = {
 };
 Game.registerLevel('level2_street', window.Level2Street);
 
-// --- КОНЕЦ ЧАСТИ 2.4 ---
-  // --- ЧАСТЬ 2.5: УРОВЕНЬ 3 (ЛЕС И ИЗБУШКА) ---
+// --- КОНЕЦ ЧАСТИ 4 ---
+// --- ЧАСТЬ 5: УРОВЕНЬ 3 (ЛЕС И ИЗБУШКА) ---
 window.Level3Forest = {
   player: null, group: null, stage: '', stageData: {},
 
@@ -1169,7 +1171,13 @@ window.Level3Forest = {
   buildForest: function() {
     const THREE = Game.THREE;
     const self = this;
-    const matGround = new THREE.MeshStandardMaterial({ color: 0x1a2a15, roughness: 1 });
+    
+    const textureLoader = new THREE.TextureLoader();
+    const dirtTex = textureLoader.load('dirt.jpg');
+    dirtTex.wrapS = dirtTex.wrapT = THREE.RepeatWrapping;
+    dirtTex.repeat.set(10, 10);
+    
+    const matGround = new THREE.MeshStandardMaterial({ map: dirtTex, roughness: 1 });
     const ground = new THREE.Mesh(new THREE.PlaneGeometry(120, 120), matGround);
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
@@ -1262,7 +1270,12 @@ window.Level3Forest = {
     const hut = new THREE.Group();
     hut.position.set(0, 0, -32);
 
-    const matLog = new THREE.MeshStandardMaterial({ color: 0x4a3320, roughness: 0.95 });
+    const textureLoader = new THREE.TextureLoader();
+    const logTex = textureLoader.load('wood_log.jpg');
+    logTex.wrapS = logTex.wrapT = THREE.RepeatWrapping;
+    logTex.repeat.set(2, 2);
+
+    const matLog = new THREE.MeshStandardMaterial({ map: logTex, roughness: 0.95 });
     const walls = new THREE.Mesh(new THREE.BoxGeometry(6, 4, 5), matLog);
     walls.position.y = 2;
     walls.castShadow = walls.receiveShadow = true;
@@ -1342,7 +1355,7 @@ window.Level3Forest = {
 
 Game.registerLevel('level3_forest', window.Level3Forest);
 
-// --- КОНЕЦ ЧАСТИ 2.5 ---
+// --- КОНЕЦ ЧАСТИ 5 ---
 </script>
 </body>
 </html>
