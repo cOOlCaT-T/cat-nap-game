@@ -822,7 +822,7 @@ window.Level1Bank = {
       const loadScreen = document.getElementById('levelLoad');
       const loadText = document.getElementById('levelLoadText');
       loadScreen.classList.remove('hidden');
-      loadText.textContent = 'Ты едешь домой...';
+      loadText.textContent = 'Ты сел в машину и едешь домой...';
       
       setTimeout(function() {
         Game.registerLevel('level2_street', window.Level2Street);
@@ -1121,9 +1121,31 @@ window.Level2Street = {
       this.group.add(l);
     }
 
+    // Дверь квартиры (5 этаж)
     const aptDoor = new THREE.Mesh(new THREE.BoxGeometry(1.2, 2.2, 0.12), matDoor);
     aptDoor.position.set(0, 1.1, -18.9);
     this.group.add(aptDoor);
+
+    // Дверь выхода на улицу (1 этаж)
+    const exitDoor = new THREE.Mesh(new THREE.BoxGeometry(1.2, 2.2, 0.12), matDoor);
+    exitDoor.position.set(0, 1.1, 19.9);
+    this.group.add(exitDoor);
+    
+    this.player.addInteractable(exitDoor, 'выйти на улицу', function() {
+      if (window.doorAudio) { window.doorAudio.currentTime = 0; window.doorAudio.play().catch(function(){}); }
+      else { window.doorAudio = new Audio('door_open.mp3'); window.doorAudio.play().catch(function(){}); }
+      
+      if (self.stage === 'morning') {
+        self.loadHomeStreet();
+        setTimeout(function() {
+          self.stage = 'home_street';
+          self.player.teleport(4, 1.7, 2, Math.PI);
+          Game.showHint('Садись в машину и поезжай.');
+        }, 1000);
+      } else {
+        self.loadHomeStreet();
+      }
+    });
 
     this.player.teleport(0, 1.7, 18, Math.PI);
 
@@ -1385,8 +1407,8 @@ window.Level2Street = {
       
       self.loadEntrance();
       setTimeout(function() {
-        self.player.teleport(0, 1.7, -18.9, 0);
-        Game.showHint('Выйди из подъезда на улицу.');
+        self.player.teleport(0, 1.7, 18, 0);
+        Game.showHint('Выйди из подъезда на улицу (дверь позади тебя).');
       }, 1000);
     });
 
@@ -1429,19 +1451,16 @@ window.Level3Forest = {
       if (camTime > 3) {
         clearInterval(animInterval);
         
-        // Машина "наезжает на капкан"
         camCar.position.y = -0.5;
         camCar.rotation.z = 0.2;
         camCar.rotation.x = 0.1;
         
         setTimeout(function() {
-          // Загружаем лес
           self.buildForest();
           self.buildCarWreck();
           self.buildPath();
           self.buildHut();
           
-          // Создаём игрока
           self.player = Player.create(scene, camera, { x: 0, y: 1.7, z: 15, yaw: Math.PI });
           self.player.speed = 2.6;
           self.stage = 'crash';
@@ -1656,7 +1675,7 @@ window.Level3Forest = {
             document.getElementById('menu').classList.remove('hidden');
             Game.currentLevel = null;
             Game.player = null;
-            initMenuForest(); // Возвращаем лес в меню
+            initMenuForest();
           });
         });
       } else {
@@ -1685,7 +1704,7 @@ window.addEventListener('DOMContentLoaded', function() {
   const loader = document.getElementById('loader');
   if (loader) loader.style.display = 'none';
 
-  initMenuForest(); // Запускаем лес в меню
+  initMenuForest();
 
   document.getElementById('btnStart').addEventListener('click', function() {
     Game.startGame('level1_bank');
